@@ -1,25 +1,34 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
-// We check if you provided your own Firebase config via Vercel Environment Variables
-const isCustomSetup = !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
-
+// Your web app's Firebase configuration using environment variables
 const firebaseConfig = {
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "gen-lang-client-0026243833",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:274762624954:web:0fb4811ccc810ae756f783",
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAfU-eT0vDUdhY6KFMU9HSx5w8jqX2uSIs",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "gen-lang-client-0026243833.firebaseapp.com",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "gen-lang-client-0026243833.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "274762624954",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
 
-// In your own Firebase project (Vercel), Firestore uses the "(default)" database.
-// AI Studio uses a specifically named isolated database.
-export const db = isCustomSetup 
-  ? getFirestore(app) // Your own Firebase default database
-  : getFirestore(app, "ai-studio-tzdistributioner-215c7673-7841-4460-be6c-6378252ba9af"); // AI Studio database fallback
+// Initialize Analytics only in production to prevent the Installations API 400 error in dev/preview environments
+let analytics: any = null;
+if (import.meta.env.PROD) {
+  try {
+    analytics = getAnalytics(app);
+  } catch (e) {
+    console.warn("Failed to initialize Analytics:", e);
+  }
+}
+
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+export { app, analytics, db, auth };

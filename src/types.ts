@@ -6,6 +6,7 @@ export interface User {
   role: Role;
   email: string;
   password?: string;
+  accessibleFeatures?: string[];
 }
 
 export interface Product {

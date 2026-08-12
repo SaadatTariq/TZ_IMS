@@ -11,6 +11,11 @@ export const Inventory: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isAdmin = currentUser?.role === 'Admin';
   
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkDeletePassword, setBulkDeletePassword] = useState('');
+  const [bulkDeleteError, setBulkDeleteError] = useState('');
+
   const [formData, setFormData] = useState<Partial<Product>>({
     code: '', barcode: '', description: '', unit: 'Box', cpu: 0, 
     tpCsd: 0, tpCaptainsWorld: 0, tpCoopers: 0, tpShumis: 0, tpGenius: 0, tpOverseas: 0, tpIferi: 0,
@@ -42,34 +47,34 @@ export const Inventory: React.FC = () => {
     });
   };
 
-  const deleteProduct = (id: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      setProducts(products.filter(p => p.id !== id));
+  const confirmDeleteProduct = () => {
+    if (productToDelete) {
+      setProducts(products.filter(p => p.id !== productToDelete));
+      setProductToDelete(null);
     }
   };
 
-  const handleBulkDelete = () => {
-    if (!isAdmin) return;
-    const pwd = prompt("Enter Admin password to bulk delete ALL inventory:");
-    if (!pwd) return;
-    if (pwd !== currentUser?.password) {
-      alert("Incorrect password!");
+  const confirmBulkDelete = () => {
+    if (bulkDeletePassword !== currentUser?.password) {
+      setBulkDeleteError("Incorrect password!");
       return;
     }
-    const confirm2 = confirm("Are you ABSOLUTELY sure? This will delete all products permanently.");
-    if (confirm2) {
-      setProducts([]);
-      alert("All inventory deleted.");
-    }
+    setProducts([]);
+    setIsBulkDeleting(false);
+    setBulkDeletePassword('');
+    setBulkDeleteError('');
   };
 
   const downloadSample = () => {
-    const csvContent = "Code,Barcode,Description,Unit,CPU,TP_CSD,TP_Captain,TP_Cooper,TP_Shumi,TP_Genius,TP_Overseas,MRP,Stock\nTZ-SAMPLE,1234567,Sample Desc,Pcs,100,105,106,107,108,109,110,150,500";
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'tz_inventory_sample.csv';
-    link.click();
+    const csv = Papa.unparse([
+      { Code: 'TZ-1001', Barcode: '1234567', Description: 'Sample Item', Unit: 'Pcs', CPU: 100, TP_CSD: 110, TP_Captains: 115, TP_Coopers: 120, TP_Shumis: 125, TP_Genius: 130, TP_Overseas: 135, TP_Iferi: 140, MRP: 200, Stock: 50 }
+    ]);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'inventory_sample.csv';
+    a.click();
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,17 +85,17 @@ export const Inventory: React.FC = () => {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const newProducts: Product[] = results.data.map((row: any) => ({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          code: row.Code || '',
+        const newProducts: Product[] = results.data.map((row: any, index) => ({
+          id: `csv-${Date.now()}-${index}`,
+          code: row.Code || `CSV-${index}`,
           barcode: row.Barcode || '',
-          description: row.Description || '',
-          unit: row.Unit || 'Pcs',
+          description: row.Description || 'Unknown',
+          unit: row.Unit || 'Box',
           cpu: parseFloat(row.CPU) || 0,
           tpCsd: parseFloat(row.TP_CSD) || 0,
-          tpCaptainsWorld: parseFloat(row.TP_Captain) || 0,
-          tpCoopers: parseFloat(row.TP_Cooper) || 0,
-          tpShumis: parseFloat(row.TP_Shumi) || 0,
+          tpCaptainsWorld: parseFloat(row.TP_Captains) || 0,
+          tpCoopers: parseFloat(row.TP_Coopers) || 0,
+          tpShumis: parseFloat(row.TP_Shumis) || 0,
           tpGenius: parseFloat(row.TP_Genius) || 0,
           tpOverseas: parseFloat(row.TP_Overseas) || 0,
           tpIferi: parseFloat(row.TP_Iferi) || 0,
@@ -99,11 +104,7 @@ export const Inventory: React.FC = () => {
         }));
         
         setProducts([...products, ...newProducts]);
-        alert(`Successfully imported ${newProducts.length} products.`);
         if (fileInputRef.current) fileInputRef.current.value = '';
-      },
-      error: (error) => {
-        alert('Error parsing CSV file: ' + error.message);
       }
     });
   };
@@ -112,51 +113,69 @@ export const Inventory: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
-        {isAdmin && (
-          <div className="flex space-x-2">
-            <input 
-              type="file" 
-              accept=".csv" 
-              className="hidden" 
-              ref={fileInputRef} 
-              onChange={handleFileUpload} 
-            />
-            <button 
-              onClick={downloadSample}
-              className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-              title="Download Sample CSV"
-            >
-              <Download size={18} className="mr-2" />
-              Sample
-            </button>
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-            >
-              <Upload size={18} className="mr-2" />
-              Bulk Upload
-            </button>
-            <button 
-              onClick={handleBulkDelete}
-              className="flex items-center px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
-            >
-              <Trash2 size={18} className="mr-2" />
-              Bulk Delete
-            </button>
-            <button 
-              onClick={() => { resetForm(); setIsAdding(true); }}
-              className="flex items-center px-4 py-2 bg-[#4097d0] text-white rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              <Plus size={20} className="mr-2" />
-              Add Product
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && (
+            <>
+              <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+              <button onClick={() => fileInputRef.current?.click()} className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                <Upload size={20} className="mr-2" />
+                Import CSV
+              </button>
+              <button onClick={downloadSample} className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                <Download size={20} className="mr-2" />
+                Sample
+              </button>
+              <button onClick={() => setIsBulkDeleting(true)} className="flex items-center px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
+                <Trash2 size={20} className="mr-2" />
+                Delete All
+              </button>
+            </>
+          )}
+          <button onClick={() => {resetForm(); setIsAdding(true);}} className="flex items-center px-4 py-2 bg-[#4097d0] text-white rounded-lg hover:bg-blue-600">
+            <Plus size={20} className="mr-2" />
+            Add Product
+          </button>
+        </div>
       </div>
 
-      {isAdding && isAdmin && (
+      {/* Modals for Custom Confirmation (No window.confirm/prompt) */}
+      {productToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-lg">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Product</h3>
+            <p className="text-gray-600 mb-6">Are you sure you want to delete this product? This action cannot be undone.</p>
+            <div className="flex justify-end space-x-3">
+              <button onClick={() => setProductToDelete(null)} className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+              <button onClick={confirmDeleteProduct} className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isBulkDeleting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-lg">
+            <h3 className="text-lg font-bold text-red-600 mb-2">Delete ALL Products</h3>
+            <p className="text-gray-600 mb-4">Are you absolutely sure? This will delete all products permanently. Enter your password to confirm.</p>
+            <input 
+              type="password" 
+              placeholder="Admin Password"
+              value={bulkDeletePassword}
+              onChange={e => setBulkDeletePassword(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md mb-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+            {bulkDeleteError && <p className="text-red-500 text-sm mb-4">{bulkDeleteError}</p>}
+            <div className="flex justify-end space-x-3 mt-4">
+              <button onClick={() => {setIsBulkDeleting(false); setBulkDeleteError('');}} className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+              <button onClick={confirmBulkDelete} className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg">Delete All</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAdding && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-lg font-bold mb-4">{formData.id ? 'Edit Product' : 'New Product'}</h2>
+          <h2 className="text-lg font-bold mb-4">{formData.id ? 'Edit Product' : 'Add New Product'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
@@ -170,7 +189,6 @@ export const Inventory: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <input required type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
             </div>
-            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
               <input required type="text" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
@@ -187,35 +205,14 @@ export const Inventory: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
               <input required type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: parseInt(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
             </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">TP (CSD)</label>
-              <input required type="number" step="0.01" value={formData.tpCsd} onChange={e => setFormData({...formData, tpCsd: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">TP (Captains World)</label>
-              <input required type="number" step="0.01" value={formData.tpCaptainsWorld} onChange={e => setFormData({...formData, tpCaptainsWorld: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">TP (Coopers)</label>
-              <input required type="number" step="0.01" value={formData.tpCoopers} onChange={e => setFormData({...formData, tpCoopers: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">TP (Shumis)</label>
-              <input required type="number" step="0.01" value={formData.tpShumis} onChange={e => setFormData({...formData, tpShumis: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">TP (Genius)</label>
-              <input required type="number" step="0.01" value={formData.tpGenius} onChange={e => setFormData({...formData, tpGenius: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">TP (Overseas)</label>
-              <input required type="number" step="0.01" value={formData.tpOverseas} onChange={e => setFormData({...formData, tpOverseas: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">TP (Iferi)</label>
-              <input required type="number" step="0.01" value={formData.tpIferi} onChange={e => setFormData({...formData, tpIferi: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
-            </div>
+            
+            <div><label className="block text-xs font-medium text-gray-700 mb-1">TP (CSD)</label><input required type="number" step="0.01" value={formData.tpCsd} onChange={e => setFormData({...formData, tpCsd: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
+            <div><label className="block text-xs font-medium text-gray-700 mb-1">TP (Captains World)</label><input required type="number" step="0.01" value={formData.tpCaptainsWorld} onChange={e => setFormData({...formData, tpCaptainsWorld: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
+            <div><label className="block text-xs font-medium text-gray-700 mb-1">TP (Coopers)</label><input required type="number" step="0.01" value={formData.tpCoopers} onChange={e => setFormData({...formData, tpCoopers: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
+            <div><label className="block text-xs font-medium text-gray-700 mb-1">TP (Shumis)</label><input required type="number" step="0.01" value={formData.tpShumis} onChange={e => setFormData({...formData, tpShumis: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
+            <div><label className="block text-xs font-medium text-gray-700 mb-1">TP (Genius)</label><input required type="number" step="0.01" value={formData.tpGenius} onChange={e => setFormData({...formData, tpGenius: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
+            <div><label className="block text-xs font-medium text-gray-700 mb-1">TP (Overseas)</label><input required type="number" step="0.01" value={formData.tpOverseas} onChange={e => setFormData({...formData, tpOverseas: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
+            <div><label className="block text-xs font-medium text-gray-700 mb-1">TP (Iferi)</label><input required type="number" step="0.01" value={formData.tpIferi} onChange={e => setFormData({...formData, tpIferi: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
 
             <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-3 mt-2">
               <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
@@ -282,7 +279,7 @@ export const Inventory: React.FC = () => {
                     <td className="p-4">
                       <div className="flex justify-center space-x-2">
                         <button onClick={() => {setFormData(p); setIsAdding(true);}} className="text-[#4097d0] hover:bg-blue-50 p-1 rounded"><Edit2 size={18} /></button>
-                        <button onClick={() => deleteProduct(p.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={18} /></button>
+                        <button onClick={() => setProductToDelete(p.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={18} /></button>
                       </div>
                     </td>
                   )}

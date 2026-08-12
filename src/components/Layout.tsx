@@ -12,20 +12,28 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
   const { currentUser, setCurrentUser } = useStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navItems = [
+  // Define all available navigation items
+  const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'billing', label: 'Billing', icon: Receipt },
     { id: 'invoice-history', label: 'Invoice History', icon: History },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'ledger', label: 'Ledger', icon: BookOpen },
+    { id: 'shipments', label: 'Shipments', icon: Truck },
+    { id: 'payroll', label: 'Payroll', icon: Wallet },
+    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'users', label: 'Users', icon: Users },
   ];
 
-  if (currentUser?.role === 'Admin') {
-    navItems.push({ id: 'shipments', label: 'Shipments', icon: Truck });
-    navItems.push({ id: 'payroll', label: 'Payroll', icon: Wallet });
-    navItems.push({ id: 'clients', label: 'Clients', icon: Users });
-    navItems.push({ id: 'users', label: 'Users', icon: Users });
-  }
+  // Filter based on user role and permissions
+  const navItems = allNavItems.filter(item => {
+    if (currentUser?.role === 'Admin') return true; // Admins see everything
+    if (!currentUser?.accessibleFeatures) {
+      // Fallback for older users without explicit permissions
+      return ['dashboard', 'billing', 'invoice-history', 'inventory', 'ledger'].includes(item.id);
+    }
+    return currentUser.accessibleFeatures.includes(item.id);
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 flex print:bg-white">

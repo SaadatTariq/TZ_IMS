@@ -73,10 +73,13 @@ export const Dashboard: React.FC = () => {
     setInvoices(invoices.map(i => i.id === id ? { ...i, status: 'Approved' } : i));
   };
 
+  const nameParts = currentUser?.name?.trim().split(/\s+/) || [];
+  const greetingName = nameParts.length > 2 ? nameParts[1] : (nameParts.length === 2 ? nameParts[1] : nameParts[0]);
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-[#2a4d7d] to-[#4097d0] rounded-xl p-8 text-white shadow-md">
-        <h1 className="text-3xl font-bold mb-2">Welcome back, {currentUser?.name.split(' ')[0]}!</h1>
+        <h1 className="text-3xl font-bold mb-2">Welcome back, {greetingName}!</h1>
         <p className="text-blue-100">Here's what's happening with your inventory and sales today.</p>
       </div>
       
