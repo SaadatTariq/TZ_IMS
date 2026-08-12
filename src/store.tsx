@@ -62,7 +62,7 @@ const initialState: StoreState = {
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<StoreState>(() => {
-    const savedUser = localStorage.getItem('erp-currentUser');
+    const savedUser = sessionStorage.getItem('erp-currentUser');
     return {
       ...initialState,
       currentUser: savedUser ? JSON.parse(savedUser) : null
@@ -80,15 +80,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       clearTimeout(fallbackTimer);
       if (docSnap.exists()) {
         const data = docSnap.data() as Partial<StoreState>;
-        // Migration: Ensure new demo users exist in the saved state
-        if (data.users && !data.users.find((u: User) => u.name === 'Mohammed Tarique Ismail')) {
-          data.users = initialUsers;
-        }
-        // Migration: Ensure new clients exist
-        if (data.clients && data.clients.length === 0) {
-          data.clients = initialClients;
-        }
+        let needsUpdate = false;
+        const updatePayload: any = {};
         
+        // Migration: Ensure all state collections exist in the remote database
+        if (!data.users || data.users.length === 0) {
+          data.users = initialUsers;
+          updatePayload.users = initialUsers;
+          needsUpdate = true;
+        } else if (!data.users.find((u: User) => u.name === 'Mohammed Tarique Ismail')) {
+          data.users = initialUsers;
+          updatePayload.users = initialUsers;
+          needsUpdate = true;
+        }
+
+        if (!data.clients || data.clients.length === 0) {
+          data.clients = initialClients;
+          updatePayload.clients = initialClients;
+          needsUpdate = true;
+        }
+
+        if (!data.products) {
+          data.products = initialProducts;
+          updatePayload.products = initialProducts;
+          needsUpdate = true;
+        }
+
+        if (!data.invoices) { data.invoices = []; updatePayload.invoices = []; needsUpdate = true; }
+        if (!data.payroll) { data.payroll = []; updatePayload.payroll = []; needsUpdate = true; }
+        if (!data.ledger) { data.ledger = []; updatePayload.ledger = []; needsUpdate = true; }
+        if (!data.shipments) { data.shipments = []; updatePayload.shipments = []; needsUpdate = true; }
+
+        if (needsUpdate) {
+          setDoc(doc(db, 'erp_store', 'main'), updatePayload, { merge: true }).catch(console.error);
+        }
+
         // Ensure currentUser is never overwritten by remote database
         delete (data as any).currentUser;
 
@@ -121,7 +147,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setState(prev => ({ ...prev, [key]: value }));
     
     if (key === 'currentUser') {
-      localStorage.setItem('erp-currentUser', JSON.stringify(value));
+      sessionStorage.setItem('erp-currentUser', JSON.stringify(value));
     } else {
       try {
         await setDoc(doc(db, 'erp_store', 'main'), { [key]: value }, { merge: true });

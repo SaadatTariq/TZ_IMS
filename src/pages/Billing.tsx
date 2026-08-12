@@ -187,15 +187,24 @@ export const Billing: React.FC = () => {
   };
 
   const generatePDF = async () => {
-    const element = document.getElementById('invoice-print-area');
-    if (!element) return null;
-    const canvas = await html2canvas(element, { scale: 2 });
-    const data = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(data, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    return pdf;
+    try {
+      const element = document.getElementById("invoice-print-area");
+      if (!element) {
+        alert("Print area not found");
+        return null;
+      }
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const data = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(data, "PNG", 0, 0, pdfWidth, pdfHeight);
+      return pdf;
+    } catch (e: any) {
+      console.error("PDF Generation error:", e);
+      alert("Failed to generate PDF: " + e.message);
+      return null;
+    }
   };
 
   const handleDownload = async () => {
@@ -208,21 +217,20 @@ export const Billing: React.FC = () => {
   const handleShare = async () => {
     const pdf = await generatePDF();
     if (!pdf) return;
-    const blob = pdf.output('blob');
-    const file = new File([blob], `Invoice_${invoiceNo || Date.now().toString()}.pdf`, { type: 'application/pdf' });
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Invoice',
-          files: [file]
-        });
-      } catch (err) {
-        console.error('Error sharing:', err);
+    try {
+      const blob = pdf.output("blob");
+      const file = new File([blob], `Invoice_${invoiceNo || Date.now().toString()}.pdf`, { type: "application/pdf" });
+      if (navigator.share) {
+        await navigator.share({ title: "Invoice", files: [file] });
+      } else {
+        alert("Sharing is not supported on this device/browser. Downloading instead.");
+        handleDownload();
       }
-    } else {
-      alert('Sharing is not supported on this device/browser. Downloading instead.');
-      handleDownload();
+    } catch (err: any) {
+      console.error("Error sharing:", err);
+      if (err.name !== "AbortError") {
+        alert("Failed to share: " + err.message);
+      }
     }
   };
 
