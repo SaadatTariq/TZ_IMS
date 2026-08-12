@@ -1,0 +1,57 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from 'react';
+import { StoreProvider, useStore } from './store';
+import { Layout } from './components/Layout';
+import { Dashboard } from './pages/Dashboard';
+import { Inventory } from './pages/Inventory';
+import { Billing } from './pages/Billing';
+import { InvoiceHistory } from './pages/InvoiceHistory';
+import { Shipments } from './pages/Shipments';
+import { Payroll } from './pages/Payroll';
+import { Ledger } from './pages/Ledger';
+import { Users } from './pages/Users';
+import { Clients } from './pages/Clients';
+import { Login } from './pages/Login';
+
+function AppContent() {
+  const { currentUser } = useStore();
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  if (!currentUser) {
+    return <Login />;
+  }
+
+  const renderPage = () => {
+    switch (activeTab) {
+      case 'dashboard': return <Dashboard />;
+      case 'inventory': return <Inventory />;
+      case 'billing': return <Billing />;
+      case 'invoice-history': return <InvoiceHistory />;
+      case 'shipments': return <Shipments />;
+      case 'payroll': return <Payroll />;
+      case 'ledger': return <Ledger />;
+      case 'users': return <Users />;
+      case 'clients': return <Clients />;
+      default: return <Dashboard />;
+    }
+  };
+
+  return (
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      {renderPage()}
+    </Layout>
+  );
+}
+
+export default function App() {
+  return (
+    <StoreProvider>
+      <AppContent />
+    </StoreProvider>
+  );
+}
+

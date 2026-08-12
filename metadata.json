@@ -1,0 +1,6 @@
+{
+  "name": "T&Z Distribution ERP",
+  "description": "Full-fledged ERP Software capable of billing, Inventory Management, Admin and employee-level locks, Payroll management, and full ledger maintenance for T&Z Distribution.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

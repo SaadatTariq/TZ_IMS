@@ -1,0 +1,66 @@
+{
+  "collections": [
+    {
+      "name": "users",
+      "fields": {
+        "name": "string",
+        "role": "string",
+        "email": "string",
+        "password": "string"
+      }
+    },
+    {
+      "name": "clients",
+      "fields": {
+        "name": "string",
+        "displayName": "string",
+        "address": "string",
+        "priceField": "string",
+        "discountPercent": "number",
+        "headers": "array"
+      }
+    },
+    {
+      "name": "products",
+      "fields": {
+        "code": "string",
+        "barcode": "string",
+        "description": "string",
+        "unit": "string",
+        "cpu": "number",
+        "tpCsd": "number",
+        "tpCaptainsWorld": "number",
+        "tpCoopers": "number",
+        "tpShumis": "number",
+        "tpGenius": "number",
+        "tpOverseas": "number",
+        "mrp": "number",
+        "stock": "number"
+      }
+    },
+    {
+      "name": "invoices",
+      "fields": {
+        "invoiceNumber": "string",
+        "date": "string",
+        "clientId": "string",
+        "clientName": "string",
+        "total": "number",
+        "status": "string",
+        "items": "array"
+      }
+    },
+    {
+      "name": "ledger",
+      "fields": {
+        "date": "string",
+        "type": "string",
+        "amount": "number",
+        "balance": "number",
+        "clientId": "string",
+        "referenceId": "string",
+        "description": "string"
+      }
+    }
+  ]
+}
