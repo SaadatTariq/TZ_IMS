@@ -19,7 +19,14 @@ import { Login } from './pages/Login';
 
 function AppContent() {
   const { currentUser } = useStore();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('erp-activeTab') || 'dashboard';
+  });
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    localStorage.setItem('erp-activeTab', tab);
+  };
 
   if (!currentUser) {
     return <Login />;
@@ -41,7 +48,7 @@ function AppContent() {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <Layout activeTab={activeTab} setActiveTab={handleTabChange}>
       {renderPage()}
     </Layout>
   );

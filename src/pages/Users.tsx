@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
 import { User, Role } from '../types';
-import { Plus, Trash2, Shield, Key } from 'lucide-react';
+import { Plus, Trash2, Shield, Edit2 } from 'lucide-react';
 
 export const Users: React.FC = () => {
   const { users, setUsers, currentUser } = useStore();
-  const [isAdding, setIsAdding] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  
-  const defaultFeatures = ['dashboard', 'inventory', 'billing'];
+
+  const defaultFeatures = ['dashboard', 'billing', 'inventory'];
   
   const [formData, setFormData] = useState<Partial<User>>({
-    name: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures
+    name: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: ''
   });
 
   if (currentUser?.role !== 'Admin') {
@@ -35,15 +36,31 @@ export const Users: React.FC = () => {
     }
   };
 
+  const openAddForm = () => {
+    setFormData({ name: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: '' });
+    setEditingUserId(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (user: User) => {
+    setFormData(user);
+    setEditingUserId(user.id);
+    setIsFormOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newUser: User = { 
-      ...formData, 
-      id: Date.now().toString() 
-    } as User;
-    setUsers([...users, newUser]);
-    setIsAdding(false);
-    setFormData({ name: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures });
+    if (editingUserId) {
+      setUsers(users.map(u => u.id === editingUserId ? { ...u, ...formData } as User : u));
+    } else {
+      const newUser: User = { 
+        ...formData, 
+        id: Date.now().toString() 
+      } as User;
+      setUsers([...users, newUser]);
+    }
+    setIsFormOpen(false);
+    setFormData({ name: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: '' });
   };
 
   const confirmDelete = () => {
@@ -58,7 +75,7 @@ export const Users: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">User Management & Locks</h1>
         <button 
-          onClick={() => setIsAdding(true)}
+          onClick={openAddForm}
           className="flex items-center px-4 py-2 bg-[#4097d0] text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
           <Plus size={20} className="mr-2" />
@@ -66,22 +83,22 @@ export const Users: React.FC = () => {
         </button>
       </div>
 
-      {isAdding && (
+      {isFormOpen && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-lg font-bold mb-4">New User</h2>
+          <h2 className="text-lg font-bold mb-4">{editingUserId ? 'Edit User' : 'New User'}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+                <input required type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+                <input required type="email" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input required type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+                <input required type="text" value={formData.password || ''} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Role (Access Level)</label>
@@ -89,6 +106,18 @@ export const Users: React.FC = () => {
                   <option value="Employee">Employee (Limited Access)</option>
                   <option value="Admin">Admin (Full Access)</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input type="text" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ID Number</label>
+                <input type="text" value={formData.idNumber || ''} onChange={e => setFormData({...formData, idNumber: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Photo URL</label>
+                <input type="url" placeholder="https://..." value={formData.photoUrl || ''} onChange={e => setFormData({...formData, photoUrl: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
               </div>
             </div>
 
@@ -112,7 +141,7 @@ export const Users: React.FC = () => {
             )}
 
             <div className="flex justify-end gap-3 pt-4">
-              <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+              <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
               <button type="submit" className="px-4 py-2 bg-[#a5bd55] text-white rounded-lg hover:bg-[#8da742]">Save User</button>
             </div>
           </form>
@@ -137,8 +166,8 @@ export const Users: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 text-gray-600 text-sm">
-                <th className="p-4 border-b">Name</th>
-                <th className="p-4 border-b">Email</th>
+                <th className="p-4 border-b">User</th>
+                <th className="p-4 border-b">Contact Info</th>
                 <th className="p-4 border-b">Role / Access</th>
                 <th className="p-4 border-b">Permissions</th>
                 <th className="p-4 border-b text-center">Actions</th>
@@ -147,8 +176,25 @@ export const Users: React.FC = () => {
             <tbody>
               {users.map(u => (
                 <tr key={u.id} className="border-b hover:bg-gray-50 transition-colors">
-                  <td className="p-4 font-medium">{u.name}</td>
-                  <td className="p-4 text-gray-600">{u.email}</td>
+                  <td className="p-4">
+                    <div className="flex items-center">
+                      {u.photoUrl ? (
+                        <img src={u.photoUrl} alt={u.name} className="w-10 h-10 rounded-full object-cover mr-3 border" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-500 font-bold">
+                          {u.name.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-medium text-gray-900">{u.name}</div>
+                        {u.idNumber && <div className="text-xs text-gray-500">ID: {u.idNumber}</div>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 text-gray-600 text-sm">
+                    <div>{u.email}</div>
+                    {u.phoneNumber && <div>{u.phoneNumber}</div>}
+                  </td>
                   <td className="p-4">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${u.role === 'Admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
                       {u.role === 'Admin' && <Shield size={12} className="mr-1" />}
@@ -167,13 +213,23 @@ export const Users: React.FC = () => {
                     )}
                   </td>
                   <td className="p-4 text-center">
-                    <button 
-                      onClick={() => u.id !== currentUser.id ? setUserToDelete(u.id) : null} 
-                      disabled={u.id === currentUser.id} 
-                      className={`p-1 rounded ${u.id === currentUser.id ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex justify-center gap-2">
+                      <button 
+                        onClick={() => openEditForm(u)}
+                        className="p-1 text-[#4097d0] hover:bg-blue-50 rounded"
+                        title="Edit user"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => u.id !== currentUser.id ? setUserToDelete(u.id) : null} 
+                        disabled={u.id === currentUser.id} 
+                        className={`p-1 rounded ${u.id === currentUser.id ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
+                        title={u.id === currentUser.id ? "Cannot delete yourself" : "Delete user"}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

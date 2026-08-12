@@ -7,6 +7,9 @@ export interface User {
   email: string;
   password?: string;
   accessibleFeatures?: string[];
+  photoUrl?: string;
+  idNumber?: string;
+  phoneNumber?: string;
 }
 
 export interface Product {

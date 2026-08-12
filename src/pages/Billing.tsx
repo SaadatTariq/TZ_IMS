@@ -268,20 +268,20 @@ export const Billing: React.FC = () => {
       <div className="print:hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Billing & Invoicing</h1>
         <div className="flex space-x-3">
-          <button onClick={() => window.print()} className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+          <button type="button" onClick={() => window.print()} className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
             <Printer size={20} className="mr-2" /> Print
           </button>
           {isSaved && (
             <>
-              <button onClick={handleDownload} className="flex items-center px-4 py-2 bg-blue-100 text-[#4097d0] rounded-lg hover:bg-blue-200 transition-colors">
+              <button type="button" onClick={handleDownload} className="flex items-center px-4 py-2 bg-blue-100 text-[#4097d0] rounded-lg hover:bg-blue-200 transition-colors">
                 <Download size={20} className="mr-2" /> Download PDF
               </button>
-              <button onClick={handleShare} className="flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
+              <button type="button" onClick={handleShare} className="flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
                 <Share2 size={20} className="mr-2" /> Share
               </button>
             </>
           )}
-          <button onClick={saveInvoice} disabled={isSaved || items.length === 0} className="flex items-center px-4 py-2 bg-[#4097d0] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50">
+          <button type="button" onClick={saveInvoice} disabled={isSaved || items.length === 0} className="flex items-center px-4 py-2 bg-[#4097d0] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50">
             {isAdmin ? <><CheckCircle size={20} className="mr-2" /> Approve & Save</> : <><Save size={20} className="mr-2" /> Submit for Approval</>}
           </button>
         </div>
@@ -304,12 +304,13 @@ export const Billing: React.FC = () => {
         {chunkedItems.map((pageItems, pageIndex) => {
           const isLastPage = pageIndex === chunkedItems.length - 1;
           const globalStartIndex = pageIndex * 20;
-
           return (
             <div key={pageIndex} className="font-sans text-black print:page-break-after">
               {/* Note: Pad Design removed, headers hidden in print */}
               
-              <div className="flex justify-between mb-4 mt-8 print:mt-16">
+              <h1 className="text-xl font-bold text-center mb-6 mt-8 print:mt-16">Invoice</h1>
+              
+              <div className="flex justify-between mb-4">
                 <div>
                   <div className="flex items-center mb-1">
                     <span className="font-semibold mr-2">Company Name:</span> 
@@ -364,11 +365,27 @@ export const Billing: React.FC = () => {
                     
                     {/* Total Row (Only on Last Page) */}
                     {isLastPage && (
-                      <tr className="border-b border-gray-400 font-bold">
-                        <td colSpan={selectedClientObj?.headers.length - 2} className="p-2 border-r border-gray-400 text-right pr-4">Total</td>
-                        <td className="p-2 border-r border-gray-400 text-center">{calculateTotal().toFixed(2)}</td>
-                        <td className="p-2"></td>
-                      </tr>
+                      <>
+                        {selectedClientObj?.discountPercent > 0 ? (
+                          <>
+                            <tr className="border-b border-gray-400">
+                              <td colSpan={selectedClientObj.headers.length - 2} className="p-2 border-r border-gray-400 text-right pr-4">Sub Total</td>
+                              <td className="p-2 border-r border-gray-400 text-center">{calculateSubTotal().toFixed(2)}</td>
+                              <td className="p-2"></td>
+                            </tr>
+                            <tr className="border-b border-gray-400">
+                              <td colSpan={selectedClientObj.headers.length - 2} className="p-2 border-r border-gray-400 text-right pr-4">DISCOUNT {selectedClientObj.discountPercent}%</td>
+                              <td className="p-2 border-r border-gray-400 text-center">{(calculateSubTotal() * (selectedClientObj.discountPercent / 100)).toFixed(2)}</td>
+                              <td className="p-2"></td>
+                            </tr>
+                          </>
+                        ) : null}
+                        <tr className="border-b border-gray-400 font-bold">
+                          <td colSpan={selectedClientObj?.headers.length - 2} className="p-2 border-r border-gray-400 text-right pr-4">Total</td>
+                          <td className="p-2 border-r border-gray-400 text-center">{calculateTotal().toFixed(2)}</td>
+                          <td className="p-2"></td>
+                        </tr>
+                      </>
                     )}
                   </tbody>
                 </table>
@@ -376,10 +393,6 @@ export const Billing: React.FC = () => {
               
               {isLastPage && (
                 <>
-                  {selectedClientObj?.discountPercent > 0 && (
-                    <p className="text-sm mb-2 text-gray-600">* Includes {selectedClientObj.discountPercent}% corporate discount.</p>
-                  )}
-
                   <div className="mb-16">
                     <p className="text-sm">Amount In Word: {numberToWords(calculateTotal())}</p>
                   </div>
@@ -403,7 +416,7 @@ export const Billing: React.FC = () => {
         </div>
 
         <div className="print:hidden mt-8">
-          <button onClick={addItem} className="flex items-center text-sm text-[#4097d0] hover:text-blue-700 font-medium">
+          <button type="button" onClick={addItem} className="flex items-center text-sm text-[#4097d0] hover:text-blue-700 font-medium">
             <Plus size={16} className="mr-1" /> Add Product Line
           </button>
         </div>
@@ -453,7 +466,7 @@ export const Billing: React.FC = () => {
                   />
                 </div>
                 <div className="pt-5">
-                  <button onClick={() => removeItem(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Remove item">
+                  <button type="button" onClick={() => removeItem(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Remove item">
                     <Trash2 size={18} />
                   </button>
                 </div>

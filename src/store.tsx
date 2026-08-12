@@ -43,7 +43,7 @@ const initialClients: Client[] = [
   { id: 'c1', name: 'CSD', displayName: '', address: '', headers: ['S.L No', 'Code', 'Product Description', 'Unit', 'Quantity', 'CPU', 'Total Price', 'Remark'], priceField: 'tpCsd', discountPercent: 4 },
   { id: 'c2', name: 'Captains World', displayName: 'Captains World', address: '', headers: ['S.L No', 'Item Code', 'Description', 'Quantity', 'CPU', 'TP', 'Total', 'Remark'], priceField: 'tpCaptainsWorld', discountPercent: 0 },
   { id: 'c3', name: 'Coopers', displayName: 'GWEEBARRA BAKERY INDUSTRY LIMITED', address: '147/1, VIP OLD AIRPORT ROAD, TEJGAON, DHAKA -1215.', headers: ['S.L No', 'Item Code', 'Item Description', 'Quantity', 'TP (TAX INCLUDED)', 'Total Price', 'Remark'], priceField: 'tpCoopers', discountPercent: 0 },
-  { id: 'c4', name: 'GENIUS', displayName: 'GENIUS', address: '', headers: ['S.L No', 'ITEM CODE', 'ITEM DESCRIPTION', 'Quantity', 'CPU', 'Total', 'REMARKS'], priceField: 'tpIferi', discountPercent: 0 },
+  { id: 'c4', name: 'GENIUS', displayName: 'GENIUS', address: '', headers: ['S.L No', 'ITEM CODE', 'ITEM DESCRIPTION', 'Quantity', 'CPU', 'Total', 'REMARKS'], priceField: 'tpGenius', discountPercent: 0 },
   { id: 'c5', name: 'Overseas', displayName: 'OVERSEAS', address: 'NIMTOLI KHILKHET DHAKA', headers: ['S.L No', 'ITEM CODE', 'ITEM DESCRIPTION', 'Quantity', 'CPU', 'Total', 'REMARKS'], priceField: 'tpOverseas', discountPercent: 0 },
   { id: 'c6', name: 'Iferi', displayName: 'IFERI', address: '', headers: ['S.L No', 'Item Code', 'Description', 'Quantity', 'TP', 'Total', 'Remark'], priceField: 'tpIferi', discountPercent: 0 },
   { id: 'c7', name: 'Shumis', displayName: 'SHUMIS', address: '', headers: ['S.L No', 'Item Code', 'Item Description', 'Quantity', 'TP', 'MRP', 'Total Price', 'Remark'], priceField: 'tpShumis', discountPercent: 0 },
@@ -71,7 +71,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    // Fallback timer: if Firebase takes too long to connect/respond, just use local state
+    const fallbackTimer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 2500);
+
     const unsubscribe = onSnapshot(doc(db, 'erp_store', 'main'), (docSnap) => {
+      clearTimeout(fallbackTimer);
       if (docSnap.exists()) {
         const data = docSnap.data() as Partial<StoreState>;
         // Migration: Ensure new demo users exist in the saved state
@@ -89,12 +95,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setState(prev => ({ ...prev, ...data }));
       } else {
         const { currentUser, ...stateToSave } = initialState;
-        setDoc(doc(db, 'erp_store', 'main'), stateToSave);
+        console.log("Document does not exist. Creating it now...");
+        setDoc(doc(db, 'erp_store', 'main'), stateToSave).then(() => {
+          console.log("Successfully created initial database document!");
+        }).catch(e => {
+          console.error("Failed to create initial database document:", e);
+          alert("Failed to initialize database: " + e.message);
+        });
       }
+      setIsLoaded(true);
+    }, (error) => {
+      clearTimeout(fallbackTimer);
+      console.error("Firebase read error:", error);
+      alert("Database read failed! You may need to update your Firestore Security Rules in the Firebase Console to allow reads. Using local fallback. Error: " + error.message);
       setIsLoaded(true);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(fallbackTimer);
+      unsubscribe();
+    };
   }, []);
 
   const updateState = async (key: keyof StoreState, value: any) => {
@@ -105,8 +125,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       try {
         await setDoc(doc(db, 'erp_store', 'main'), { [key]: value }, { merge: true });
-      } catch (err) {
+      } catch (err: any) {
         console.error("Firebase sync error:", err);
+        alert("Database save failed! You may need to update your Firestore Security Rules in the Firebase Console to allow writes. Error: " + err.message);
       }
     }
   };
