@@ -84,15 +84,6 @@ export const Login: React.FC = () => {
               </button>
             </div>
           </form>
-          
-          <div className="mt-6 border-t border-gray-200 pt-4 text-xs text-gray-500">
-            <p><strong>Demo Accounts:</strong></p>
-            <ul className="mt-2 space-y-1">
-              <li>Mohammed Tarique Ismail / Admin001</li>
-              <li>Mohammed Saadat Tariq / Admin002</li>
-              <li>Md Masum / Emp001</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
