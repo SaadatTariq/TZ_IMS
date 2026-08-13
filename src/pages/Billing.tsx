@@ -5,6 +5,7 @@ import { Invoice, InvoiceItem, Product, Client } from '../types';
 import { Plus, Trash2, Printer, Save, CheckCircle, Search, Download, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { useReactToPrint } from 'react-to-print';
 import { numberToWords } from '../utils';
 
 // Helper component for Product Search
@@ -78,6 +79,12 @@ export const Billing: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>(clients[0]?.id || '');
   const [items, setItems] = useState<(InvoiceItem & { product: Product })[]>([]);
   const [isSaved, setIsSaved] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: `Invoice_${invoiceNo || "Draft"}`, 
+  });
   const [invoiceNo, setInvoiceNo] = useState('');
   
   const isAdmin = currentUser?.role === 'Admin';
@@ -187,6 +194,8 @@ export const Billing: React.FC = () => {
   };
 
   const generatePDF = async () => {
+    setIsGenerating(true);
+
     try {
       const element = document.getElementById("invoice-print-area");
       if (!element) {
@@ -199,10 +208,12 @@ export const Billing: React.FC = () => {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       pdf.addImage(data, "PNG", 0, 0, pdfWidth, pdfHeight);
+      setIsGenerating(false);
       return pdf;
     } catch (e: any) {
       console.error("PDF Generation error:", e);
       alert("Failed to generate PDF: " + e.message);
+      setIsGenerating(false);
       return null;
     }
   };
@@ -276,16 +287,18 @@ export const Billing: React.FC = () => {
       <div className="print:hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Billing & Invoicing</h1>
         <div className="flex space-x-3">
-          <button type="button" onClick={() => window.print()} className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+          <button type="button" onClick={handlePrint} className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
             <Printer size={20} className="mr-2" /> Print
           </button>
           {isSaved && (
             <>
-              <button type="button" onClick={handleDownload} className="flex items-center px-4 py-2 bg-blue-100 text-[#4097d0] rounded-lg hover:bg-blue-200 transition-colors">
-                <Download size={20} className="mr-2" /> Download PDF
+              <button type="button" onClick={handleDownload} disabled={isGenerating} className="flex items-center px-4 py-2 bg-blue-100 text-[#4097d0] rounded-lg hover:bg-blue-200 transition-colors">
+                {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2" /> : <Download size={20} className="mr-2" />}
+                {isGenerating ? "Generating..." : "Download PDF"}
               </button>
-              <button type="button" onClick={handleShare} className="flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
-                <Share2 size={20} className="mr-2" /> Share
+              <button type="button" onClick={handleShare} disabled={isGenerating} className="flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
+                {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2" /> : <Share2 size={20} className="mr-2" />}
+                {isGenerating ? "Processing..." : "Share"}
               </button>
             </>
           )}
@@ -308,7 +321,7 @@ export const Billing: React.FC = () => {
         </div>
 
         {/* Invoice Pages */}
-        <div id="invoice-print-area" className="bg-white p-4">
+        <div id="invoice-print-area" ref={printRef} className="bg-white p-4">
         {chunkedItems.map((pageItems, pageIndex) => {
           const isLastPage = pageIndex === chunkedItems.length - 1;
           const globalStartIndex = pageIndex * 20;
