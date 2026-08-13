@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { Invoice, InvoiceItem, Product, Client } from '../types';
-import { Plus, Trash2, Printer, Save, CheckCircle, Search, Download, Share2 } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, CheckCircle, Search, Download, Share2, Upload } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useReactToPrint } from 'react-to-print';
 import { numberToWords } from '../utils';
+import { InvoiceTemplate } from '../components/InvoiceTemplate';
 
 // Helper component for Product Search
 const ProductSearch: React.FC<{
@@ -29,7 +30,7 @@ const ProductSearch: React.FC<{
   }, []);
 
   const filteredProducts = products.filter(p => 
-    p.code.toLowerCase().includes(searchTerm.toLowerCase())
+    p.code.toLowerCase().includes(searchTerm.toLowerCase()) || (p.barcode || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -78,14 +79,90 @@ export const Billing: React.FC = () => {
   const { products, invoices, setInvoices, setProducts, clients, currentUser } = useStore();
   const [selectedClientId, setSelectedClientId] = useState<string>(clients[0]?.id || '');
   const [items, setItems] = useState<(InvoiceItem & { product: Product })[]>([]);
+  
+  const [isParsingPO, setIsParsingPO] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePOUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsingPO(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64 = reader.result;
+        const mime = file.type;
+        
+        try {
+          const response = await fetch('/api/parse-po', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64: base64, mimeType: mime })
+          });
+          
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Failed to parse PO');
+          }
+          
+          const data = await response.json();
+          
+          if (data.items && Array.isArray(data.items)) {
+            const newItems = [...items];
+            
+            data.items.forEach((poItem) => {
+              const qty = parseInt(poItem.quantity) || 1;
+              let matchedProduct = products.find(p => p.code === poItem.code || p.barcode === poItem.code || (p.descriptionCsd && p.descriptionCsd.trim().toLowerCase() === (poItem.description || '').trim().toLowerCase()));
+              
+              if (!matchedProduct) {
+                 matchedProduct = products.find(p => p.description.trim().toLowerCase() === (poItem.description || '').trim().toLowerCase());
+              }
+
+              if (matchedProduct) {
+                newItems.push({
+                  productId: matchedProduct.id,
+                  quantity: qty,
+                  remark: '',
+                  product: matchedProduct
+                });
+              }
+            });
+            
+            if (newItems.length > items.length) {
+              setItems(newItems);
+            } else {
+              alert('Could not match any products from the PO to your inventory.');
+            }
+          }
+          
+          setIsParsingPO(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        } catch (fetchErr) {
+          console.error(fetchErr);
+          alert('Error parsing PO: ' + fetchErr.message);
+          setIsParsingPO(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      };
+    } catch (err) {
+      console.error(err);
+      alert('Error reading PO file');
+      setIsParsingPO(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const [isSaved, setIsSaved] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const [invoiceNo, setInvoiceNo] = useState('');
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `Invoice_${invoiceNo || "Draft"}`, 
   });
-  const [invoiceNo, setInvoiceNo] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash Sale' | 'Credit Sale'>('Cash Sale');
   
   const isAdmin = currentUser?.role === 'Admin';
   
@@ -171,7 +248,8 @@ export const Billing: React.FC = () => {
       total,
       discount: selectedClientObj?.discountPercent ? calculateSubTotal() * (selectedClientObj.discountPercent / 100) : 0,
       status,
-      createdBy: currentUser?.name
+      createdBy: currentUser?.name,
+      paymentMethod
     };
     
     setInvoices([...invoices, newInvoice]);
@@ -307,134 +385,59 @@ export const Billing: React.FC = () => {
           </button>
         </div>
       </div>
+      
+      <div className="print:hidden flex justify-end">
+        <div className="flex items-center space-x-2">
+          <label className="text-sm font-medium text-gray-700">Payment Method:</label>
+          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'Cash Sale' | 'Credit Sale')} className="px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#4097d0]">
+            <option value="Cash Sale">Cash Sale</option>
+            <option value="Credit Sale">Credit Sale</option>
+          </select>
+        </div>
+      </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 print:shadow-none print:border-none print:p-0">
-        <div className="mb-6 print:hidden">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Select Client</label>
-          <select 
-            value={selectedClientId} 
-            onChange={(e) => { setSelectedClientId(e.target.value); setItems([]); setIsSaved(false); }}
-            className="w-full sm:w-1/3 px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#4097d0]"
-          >
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+        <div className="mb-6 print:hidden flex items-end space-x-4">
+          <div className="flex-1 sm:flex-none sm:w-1/3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Client</label>
+            <select 
+              value={selectedClientId} 
+              onChange={(e) => { setSelectedClientId(e.target.value); setItems([]); setIsSaved(false); }}
+              className="w-full px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#4097d0]"
+            >
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          {selectedClientObj?.name === 'CSD' && (
+            <div>
+              <input 
+                type="file" 
+                accept="image/*,application/pdf" 
+                ref={fileInputRef} 
+                onChange={handlePOUpload} 
+                className="hidden" 
+              />
+              <button 
+                type="button" 
+                onClick={() => fileInputRef.current?.click()} 
+                disabled={isParsingPO}
+                className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+              >
+                {isParsingPO ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-700 mr-2" /> : <Upload size={20} className="mr-2" />}
+                {isParsingPO ? "Parsing PO..." : "Upload CSD PO"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Invoice Pages */}
-        <div id="invoice-print-area" ref={printRef} className="bg-white p-4">
-        {chunkedItems.map((pageItems, pageIndex) => {
-          const isLastPage = pageIndex === chunkedItems.length - 1;
-          const globalStartIndex = pageIndex * 20;
-          return (
-            <div key={pageIndex} className="font-sans text-black print:page-break-after">
-              {/* Note: Pad Design removed, headers hidden in print */}
-              
-              <h1 className="text-xl font-bold text-center mb-6 mt-8 print:mt-16">Invoice</h1>
-              
-              <div className="flex justify-between mb-4">
-                <div>
-                  <div className="flex items-center mb-1">
-                    <span className="font-semibold mr-2">Company Name:</span> 
-                    {selectedClientObj?.displayName ? (
-                      <span>{selectedClientObj.displayName}</span>
-                    ) : (
-                      <input type="text" placeholder="Enter Company Name" className="border-b border-gray-400 focus:outline-none focus:border-black bg-transparent w-64 px-1 text-sm print:border-none print:p-0" />
-                    )}
-                  </div>
-                  {selectedClientObj?.name !== 'CSD' && (
-                    <div className="flex items-center mb-1">
-                      <span className="font-semibold mr-2">Address:</span> 
-                      {selectedClientObj?.address ? (
-                        <span>{selectedClientObj.address}</span>
-                      ) : (
-                        <input type="text" placeholder="Enter Address" className="border-b border-gray-400 focus:outline-none focus:border-black bg-transparent w-64 px-1 text-sm print:border-none print:p-0" />
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-center mt-1">
-                    <span className="font-semibold mr-2">Invoice No:</span> 
-                    <input 
-                      type="text" 
-                      value={invoiceNo}
-                      onChange={(e) => setInvoiceNo(e.target.value)}
-                      className="border-b border-gray-400 focus:outline-none focus:border-black bg-transparent w-32 px-1 text-sm print:border-none print:p-0"
-                    />
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p><span className="font-semibold">Date:</span> {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}</p>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto mb-4">
-                <table className="w-full text-left border-collapse border border-gray-400">
-                  <thead>
-                    <tr className="border-b border-gray-400 text-sm">
-                      {selectedClientObj?.headers.map((h, i, arr) => (
-                        <th key={h} className={`p-2 text-center ${i < arr.length - 1 ? 'border-r border-gray-400' : ''}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm">
-                    {pageItems.map((item, localIndex) => (
-                      <tr key={localIndex} className="border-b border-gray-400">
-                        {selectedClientObj?.headers.map((h, i, arr) => 
-                          renderCell(h, item, globalStartIndex + localIndex + 1, arr.length, i)
-                        )}
-                      </tr>
-                    ))}
-                    
-                    {/* Total Row (Only on Last Page) */}
-                    {isLastPage && (
-                      <>
-                        {selectedClientObj?.discountPercent > 0 ? (
-                          <>
-                            <tr className="border-b border-gray-400">
-                              <td colSpan={selectedClientObj.headers.length - 2} className="p-2 border-r border-gray-400 text-right pr-4">Sub Total</td>
-                              <td className="p-2 border-r border-gray-400 text-center">{calculateSubTotal().toFixed(2)}</td>
-                              <td className="p-2"></td>
-                            </tr>
-                            <tr className="border-b border-gray-400">
-                              <td colSpan={selectedClientObj.headers.length - 2} className="p-2 border-r border-gray-400 text-right pr-4">DISCOUNT {selectedClientObj.discountPercent}%</td>
-                              <td className="p-2 border-r border-gray-400 text-center">{(calculateSubTotal() * (selectedClientObj.discountPercent / 100)).toFixed(2)}</td>
-                              <td className="p-2"></td>
-                            </tr>
-                          </>
-                        ) : null}
-                        <tr className="border-b border-gray-400 font-bold">
-                          <td colSpan={selectedClientObj?.headers.length - 2} className="p-2 border-r border-gray-400 text-right pr-4">Total</td>
-                          <td className="p-2 border-r border-gray-400 text-center">{calculateTotal().toFixed(2)}</td>
-                          <td className="p-2"></td>
-                        </tr>
-                      </>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              
-              {isLastPage && (
-                <>
-                  <div className="mb-16">
-                    <p className="text-sm">Amount In Word: {numberToWords(calculateTotal())}</p>
-                  </div>
-
-                  <div className="flex justify-between items-end mt-20">
-                    <div className="border-t border-black w-48 text-center pt-2">
-                      <p className="text-sm">Received By</p>
-                    </div>
-                    <div className="text-center w-64 flex flex-col items-center">
-                      <p className="text-sm mb-12">Authorized Signature</p>
-                      <div className="border-t border-black w-48 text-center pt-2">
-                        <p className="text-sm">T & Z DISTRIBUTION</p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-        </div>
+        <InvoiceTemplate 
+          ref={printRef}
+          invoiceNo={invoiceNo}
+          selectedClientObj={selectedClientObj}
+          items={items}
+          date={new Date().toISOString()}
+        />
 
         <div className="print:hidden mt-8">
           <button type="button" onClick={addItem} className="flex items-center text-sm text-[#4097d0] hover:text-blue-700 font-medium">

@@ -17,7 +17,8 @@ export const Inventory: React.FC = () => {
   const [bulkDeleteError, setBulkDeleteError] = useState('');
 
   const [formData, setFormData] = useState<Partial<Product>>({
-    code: '', barcode: '', description: '', unit: 'Box', cpu: 0, 
+    code: '', barcode: '', description: '',
+    descriptionCsd: '', unit: 'Box', cpu: 0, 
     tpCsd: 0, tpCaptainsWorld: 0, tpCoopers: 0, tpShumis: 0, tpGenius: 0, tpOverseas: 0, tpIferi: 0,
     mrp: 0, stock: 0
   });
@@ -67,7 +68,7 @@ export const Inventory: React.FC = () => {
 
   const downloadSample = () => {
     const csv = Papa.unparse([
-      { Code: 'TZ-1001', Barcode: '1234567', Description: 'Sample Item', Unit: 'Pcs', CPU: 100, TP_CSD: 110, TP_Captains: 115, TP_Coopers: 120, TP_Shumis: 125, TP_Genius: 130, TP_Overseas: 135, TP_Iferi: 140, MRP: 200, Stock: 50 }
+      { Code: 'TZ-1001', Barcode: '1234567', Description: 'Sample Item', Description_CSD: 'Sample Item CSD', Unit: 'Pcs', CPU: 100, TP_CSD: 110, TP_Captains: 115, TP_Coopers: 120, TP_Shumis: 125, TP_Genius: 130, TP_Overseas: 135, TP_Iferi: 140, MRP: 200, Stock: 50 }
     ]);
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -90,6 +91,7 @@ export const Inventory: React.FC = () => {
           code: row.Code || `CSV-${index}`,
           barcode: row.Barcode || '',
           description: row.Description || 'Unknown',
+          descriptionCsd: row.Description_CSD || '',
           unit: row.Unit || 'Box',
           cpu: parseFloat(row.CPU) || 0,
           tpCsd: parseFloat(row.TP_CSD) || 0,
@@ -242,6 +244,7 @@ export const Inventory: React.FC = () => {
                 <th className="p-4 border-b">Code</th>
                 <th className="p-4 border-b">Barcode (CSD)</th>
                 <th className="p-4 border-b">Description</th>
+                <th className="p-4 border-b">Desc (CSD)</th>
                 {isAdmin && <th className="p-4 border-b text-right">CPU</th>}
                 <th className="p-4 border-b text-right text-gray-400">TP (CSD)</th>
                 <th className="p-4 border-b text-right text-gray-400">TP (Captain)</th>
@@ -261,6 +264,7 @@ export const Inventory: React.FC = () => {
                   <td className="p-4 font-medium">{p.code}</td>
                   <td className="p-4 text-gray-500">{p.barcode || '-'}</td>
                   <td className="p-4">{p.description}</td>
+                  <td className="p-4 text-gray-500">{p.descriptionCsd || "-"}</td>
                   {isAdmin && <td className="p-4 text-right">৳{p.cpu}</td>}
                   <td className="p-4 text-right text-gray-500">৳{p.tpCsd}</td>
                   <td className="p-4 text-right text-gray-500">৳{p.tpCaptainsWorld}</td>

@@ -17,6 +17,7 @@ export interface Product {
   code: string;
   barcode?: string;
   description: string;
+  descriptionCsd?: string;
   unit: string;
   cpu: number; 
   tpCsd: number;
@@ -56,6 +57,7 @@ export interface Invoice {
   items: InvoiceItem[];
   total: number;
   discount?: number;
+  paymentMethod?: 'Cash Sale' | 'Credit Sale';
   status: 'Pending Approval' | 'Approved' | 'Paid' | 'Unpaid' | 'Cancelled';
   createdBy?: string;
 }

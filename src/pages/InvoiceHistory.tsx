@@ -1,12 +1,73 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { FileText, XCircle, Search, Eye } from 'lucide-react';
+import { FileText, XCircle, Search, Eye, Printer, Download, Share2 } from 'lucide-react';
+import { InvoiceTemplate } from '../components/InvoiceTemplate';
+import { useReactToPrint } from 'react-to-print';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { Invoice } from '../types';
 
 export const InvoiceHistory: React.FC = () => {
-  const { invoices, setInvoices, products, setProducts, currentUser } = useStore();
+  const { invoices, setInvoices, products, setProducts, currentUser, clients } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const printRef = React.useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Invoice_${selectedInvoice?.id || "Draft"}`, 
+  });
+
+  const generatePDF = async () => {
+    setIsGenerating(true);
+    try {
+      const element = printRef.current;
+      if (!element) return null;
+      // Temporarily make it visible for html2canvas
+      
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      
+      
+      const data = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(data, "PNG", 0, 0, pdfWidth, pdfHeight);
+      setIsGenerating(false);
+      return pdf;
+    } catch (e: any) {
+      console.error("PDF Generation error:", e);
+      setIsGenerating(false);
+      return null;
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!selectedInvoice) return;
+    const pdf = await generatePDF();
+    if (pdf) {
+      pdf.save(`Invoice_${selectedInvoice.id}.pdf`);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!selectedInvoice) return;
+    const pdf = await generatePDF();
+    if (!pdf) return;
+    try {
+      const blob = pdf.output("blob");
+      const file = new File([blob], `Invoice_${selectedInvoice.id}.pdf`, { type: "application/pdf" });
+      if (navigator.share) {
+        await navigator.share({ title: "Invoice", files: [file] });
+      } else {
+        alert("Sharing is not supported on this device/browser. Downloading instead.");
+        handleDownload();
+      }
+    } catch (err: any) {
+      console.error("Error sharing:", err);
+    }
+  };
+
 
   const isAdmin = currentUser?.role === 'Admin';
 
@@ -131,9 +192,22 @@ export const InvoiceHistory: React.FC = () => {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h2 className="text-xl font-bold text-gray-800">Invoice Details - {selectedInvoice.id}</h2>
-              <button onClick={() => setSelectedInvoice(null)} className="text-gray-500 hover:text-gray-700">
-                <XCircle size={24} />
-              </button>
+              <div className="flex space-x-2">
+                <button onClick={handlePrint} className="flex items-center px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                  <Printer size={16} className="mr-1" /> Print
+                </button>
+                <button onClick={handleDownload} disabled={isGenerating} className="flex items-center px-3 py-1.5 bg-blue-100 text-[#4097d0] rounded-lg hover:bg-blue-200">
+                  {isGenerating ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-1" /> : <Download size={16} className="mr-1" />}
+                  Download
+                </button>
+                <button onClick={handleShare} disabled={isGenerating} className="flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200">
+                  {isGenerating ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-1" /> : <Share2 size={16} className="mr-1" />}
+                  Share
+                </button>
+                <button onClick={() => setSelectedInvoice(null)} className="ml-2 text-gray-500 hover:text-gray-700">
+                  <XCircle size={24} />
+                </button>
+              </div>
             </div>
             <div className="p-6 overflow-y-auto">
               <div className="mb-4">
@@ -166,6 +240,20 @@ export const InvoiceHistory: React.FC = () => {
                 <p><strong>Discount:</strong> ৳{(selectedInvoice.discount || 0).toFixed(2)}</p>
                 <p className="text-lg font-bold text-[#36609b]"><strong>Total:</strong> ৳{selectedInvoice.total.toFixed(2)}</p>
               </div>
+            </div>
+
+            {/* Hidden Print Template */}
+            <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
+              <InvoiceTemplate 
+                ref={printRef}
+                invoiceNo={selectedInvoice.id}
+                selectedClientObj={clients.find(c => c.name === selectedInvoice.clientId) || clients[0]}
+                items={selectedInvoice.items.map(item => ({
+                  ...item,
+                  product: products.find(p => p.id === item.productId) || {} as any
+                }))}
+                date={selectedInvoice.date}
+              />
             </div>
             <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50">
               <button 

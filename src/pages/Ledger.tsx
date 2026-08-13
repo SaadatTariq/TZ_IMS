@@ -4,7 +4,7 @@ import { LedgerEntry } from '../types';
 import { Plus } from 'lucide-react';
 
 export const Ledger: React.FC = () => {
-  const { ledger, setLedger, invoices, payroll } = useStore();
+  const { ledger, setLedger, invoices, setInvoices, payroll } = useStore();
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<LedgerEntry>>({
     date: new Date().toISOString().slice(0, 10),
@@ -14,11 +14,12 @@ export const Ledger: React.FC = () => {
   });
 
   // Calculate composite ledger (manual entries + auto-generated from invoices and payroll)
-  const compositeLedger = [...ledger];
+  const compositeLedger: (LedgerEntry & { originalInvoice?: any, balance?: number })[] = [...ledger];
   
-  invoices.filter(i => i.status === 'Paid').forEach(i => {
+  invoices.filter(i => ['Approved', 'Paid', 'Unpaid'].includes(i.status)).forEach(i => {
     compositeLedger.push({
       id: `inv-${i.id}`,
+      originalInvoice: i,
       date: i.date,
       description: `Invoice Payment - ${i.title || i.clientId}`,
       credit: i.total,
@@ -42,9 +43,17 @@ export const Ledger: React.FC = () => {
   // Calculate running balance
   let runningBalance = 0;
   const ledgerWithBalance = compositeLedger.map(entry => {
-    runningBalance += (entry.credit - entry.debit);
+    if (!entry.originalInvoice || entry.originalInvoice.status === 'Paid') {
+      runningBalance += (entry.credit - entry.debit);
+    }
     return { ...entry, balance: runningBalance };
   });
+
+  
+  const toggleInvoiceStatus = (invoice: any) => {
+    const newStatus = invoice.status === 'Paid' ? 'Unpaid' : 'Paid';
+    setInvoices(invoices.map(inv => inv.id === invoice.id ? { ...inv, status: newStatus } : inv));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,26 +127,41 @@ export const Ledger: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
+              
               <tr className="bg-gray-50 text-gray-600 text-sm">
                 <th className="p-4 border-b">Date</th>
                 <th className="p-4 border-b">Description</th>
                 <th className="p-4 border-b text-right text-red-600">Debit (Out)</th>
                 <th className="p-4 border-b text-right text-green-600">Credit (In)</th>
                 <th className="p-4 border-b text-right">Balance</th>
+                <th className="p-4 border-b text-center">Status</th>
               </tr>
             </thead>
             <tbody>
               {ledgerWithBalance.slice().reverse().map(entry => (
+                
                 <tr key={entry.id} className="border-b hover:bg-gray-50 transition-colors">
                   <td className="p-4 whitespace-nowrap">{new Date(entry.date).toLocaleDateString()}</td>
-                  <td className="p-4">{entry.description}</td>
+                  <td className="p-4">{entry.description} {entry.originalInvoice?.paymentMethod ? `(${entry.originalInvoice.paymentMethod})` : ''}</td>
                   <td className="p-4 text-right text-red-600">{entry.debit > 0 ? `৳${entry.debit.toLocaleString()}` : '-'}</td>
                   <td className="p-4 text-right text-green-600">{entry.credit > 0 ? `৳${entry.credit.toLocaleString()}` : '-'}</td>
-                  <td className="p-4 text-right font-bold">৳{entry.balance.toLocaleString()}</td>
+                  <td className="p-4 text-right font-bold">{!entry.originalInvoice || entry.originalInvoice.status === 'Paid' ? `৳${entry.balance?.toLocaleString()}` : '-'}</td>
+                  <td className="p-4 text-center">
+                    {entry.originalInvoice ? (
+                      <button 
+                        onClick={() => toggleInvoiceStatus(entry.originalInvoice)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${entry.originalInvoice.status === 'Paid' ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'}`}
+                      >
+                        {entry.originalInvoice.status === 'Paid' ? 'Paid' : 'Mark Paid'}
+                      </button>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {ledgerWithBalance.length === 0 && (
-                <tr><td colSpan={5} className="p-8 text-center text-gray-500">No ledger entries found.</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-gray-500">No ledger entries found.</td></tr>
               )}
             </tbody>
           </table>
