@@ -24,6 +24,25 @@ export const Dashboard: React.FC = () => {
     { title: 'Out of Stock', value: outOfStock, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100' },
   ];
 
+  const monthlySalesData = React.useMemo(() => {
+    const months = {};
+    invoices
+      .filter(i => i.status === 'Paid' || i.status === 'Approved')
+      .forEach(inv => {
+        const date = new Date(inv.date);
+        const monthYear = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+        months[monthYear] = (months[monthYear] || 0) + inv.total;
+      });
+
+    return Object.entries(months)
+      .map(([key, value]) => ({
+        name: key,
+        Sales: value,
+        timestamp: new Date(key).getTime()
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp);
+  }, [invoices]);
+
   const demandData = useMemo(() => {
     const counts: Record<string, number> = {};
     invoices.forEach(inv => {
@@ -129,7 +148,28 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Monthly Sales Trends</h2>
+          <div className="h-64">
+            {monthlySalesData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlySalesData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{fontSize: 12}} />
+                  <YAxis />
+                  <Tooltip formatter={(value) => ['৳ ' + value.toLocaleString(), 'Sales']} />
+                  <Line type="monotone" dataKey="Sales" stroke="#a5bd55" strokeWidth={3} dot={{r: 4}} activeDot={{r: 6}} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                No sales data available
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Product Demand (Top 5)</h2>
           <div className="h-64">

@@ -7,10 +7,11 @@ interface InvoiceTemplateProps {
   selectedClientObj: Client;
   items: (InvoiceItem & { product: Product })[];
   date: string; // ISO string or formatted string
+  csdBranch?: string;
 }
 
 export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({
-  invoiceNo, selectedClientObj, items, date
+  invoiceNo, selectedClientObj, items, date, csdBranch
 }, ref) => {
   const getUnitPrice = (p: Product) => {
     if (!selectedClientObj) return p.cpu;
@@ -27,11 +28,9 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   };
 
   const calculateTotal = () => {
-    let total = calculateSubTotal();
-    if (selectedClientObj?.discountPercent) {
-      total = total * (1 - (selectedClientObj.discountPercent / 100));
-    }
-    return total;
+    let subTotal = calculateSubTotal();
+    let discount = selectedClientObj?.discountPercent ? Math.round(subTotal * (selectedClientObj.discountPercent / 100)) : 0;
+    return Math.round(subTotal - discount);
   };
 
   const renderCell = (header: string, item: InvoiceItem & { product: Product }, sl: number, arrLength: number, i: number) => {
@@ -85,7 +84,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               <div>
                 <div className="flex items-center mb-1">
                   <span className="font-semibold mr-2">Company Name:</span> 
-                  <span>{selectedClientObj?.displayName || selectedClientObj?.name}</span>
+                  <span>{selectedClientObj?.name === 'CSD' ? `CSD ${csdBranch || '___________________'}` : (selectedClientObj?.displayName || selectedClientObj?.name)}</span>
                 </div>
                 {selectedClientObj?.name !== 'CSD' && (
                   <div className="flex items-center mb-1">
@@ -132,7 +131,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                           </tr>
                           <tr className="border-b border-gray-400">
                             <td colSpan={selectedClientObj.headers.length - 2} className="p-2 border-r border-gray-400 text-right pr-4">DISCOUNT {selectedClientObj.discountPercent}%</td>
-                            <td className="p-2 border-r border-gray-400 text-center">{(calculateSubTotal() * (selectedClientObj.discountPercent / 100)).toFixed(2)}</td>
+                            <td className="p-2 border-r border-gray-400 text-center">{Math.round(calculateSubTotal() * (selectedClientObj.discountPercent / 100)).toFixed(2)}</td>
                             <td className="p-2"></td>
                           </tr>
                         </>
@@ -150,7 +149,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             
             {isLastPage && (
               <>
-                <div className="mb-16">
+                <div className="mb-16 text-center">
                   <p className="text-sm">Amount In Word: {numberToWords(calculateTotal())}</p>
                 </div>
 

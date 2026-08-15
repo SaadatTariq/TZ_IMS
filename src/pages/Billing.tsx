@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { Invoice, InvoiceItem, Product, Client } from '../types';
-import { Plus, Trash2, Printer, Save, CheckCircle, Search, Download, Share2, Upload } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { Plus, Trash2, Printer, Save, CheckCircle, Search, Download, Share2 } from 'lucide-react';
+import * as htmlToImage from 'html-to-image';
 import jsPDF from 'jspdf';
 import { useReactToPrint } from 'react-to-print';
 import { numberToWords } from '../utils';
@@ -80,80 +80,6 @@ export const Billing: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>(clients[0]?.id || '');
   const [items, setItems] = useState<(InvoiceItem & { product: Product })[]>([]);
   
-  const [isParsingPO, setIsParsingPO] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handlePOUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsParsingPO(true);
-    try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64 = reader.result;
-        const mime = file.type;
-        
-        try {
-          const response = await fetch('/api/parse-po', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64, mimeType: mime })
-          });
-          
-          if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || 'Failed to parse PO');
-          }
-          
-          const data = await response.json();
-          
-          if (data.items && Array.isArray(data.items)) {
-            const newItems = [...items];
-            
-            data.items.forEach((poItem) => {
-              const qty = parseInt(poItem.quantity) || 1;
-              let matchedProduct = products.find(p => p.code === poItem.code || p.barcode === poItem.code || (p.descriptionCsd && p.descriptionCsd.trim().toLowerCase() === (poItem.description || '').trim().toLowerCase()));
-              
-              if (!matchedProduct) {
-                 matchedProduct = products.find(p => p.description.trim().toLowerCase() === (poItem.description || '').trim().toLowerCase());
-              }
-
-              if (matchedProduct) {
-                newItems.push({
-                  productId: matchedProduct.id,
-                  quantity: qty,
-                  remark: '',
-                  product: matchedProduct
-                });
-              }
-            });
-            
-            if (newItems.length > items.length) {
-              setItems(newItems);
-            } else {
-              alert('Could not match any products from the PO to your inventory.');
-            }
-          }
-          
-          setIsParsingPO(false);
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        } catch (fetchErr) {
-          console.error(fetchErr);
-          alert('Error parsing PO: ' + fetchErr.message);
-          setIsParsingPO(false);
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-      };
-    } catch (err) {
-      console.error(err);
-      alert('Error reading PO file');
-      setIsParsingPO(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
   const [isSaved, setIsSaved] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
@@ -163,6 +89,7 @@ export const Billing: React.FC = () => {
     documentTitle: `Invoice_${invoiceNo || "Draft"}`, 
   });
   const [paymentMethod, setPaymentMethod] = useState<'Cash Sale' | 'Credit Sale'>('Cash Sale');
+  const [csdBranch, setCsdBranch] = useState('');
   
   const isAdmin = currentUser?.role === 'Admin';
   
@@ -224,11 +151,9 @@ export const Billing: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    let total = calculateSubTotal();
-    if (selectedClientObj?.discountPercent) {
-      total = total * (1 - (selectedClientObj.discountPercent / 100));
-    }
-    return total;
+    let subTotal = calculateSubTotal();
+    let discount = selectedClientObj?.discountPercent ? Math.round(subTotal * (selectedClientObj.discountPercent / 100)) : 0;
+    return Math.round(subTotal - discount);
   };
 
   const saveInvoice = () => {
@@ -237,7 +162,9 @@ export const Billing: React.FC = () => {
     const total = calculateTotal();
     const status = isAdmin ? 'Approved' : 'Pending Approval';
     const dateFormatted = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-    const invoiceTitle = `${selectedClientObj.name} Invoice Dated ${dateFormatted}`;
+    const invoiceTitle = selectedClientObj.name === 'CSD' 
+      ? `CSD ${csdBranch || '___________________'} invoice dated ${dateFormatted}`
+      : `${selectedClientObj.name} Invoice Dated ${dateFormatted}`;
 
     const newInvoice: Invoice = {
       id: invoiceNo || Date.now().toString(),
@@ -246,10 +173,11 @@ export const Billing: React.FC = () => {
       date: new Date().toISOString(),
       items: items.map(({ productId, quantity, remark }) => ({ productId, quantity, remark })),
       total,
-      discount: selectedClientObj?.discountPercent ? calculateSubTotal() * (selectedClientObj.discountPercent / 100) : 0,
+      discount: selectedClientObj?.discountPercent ? Math.round(calculateSubTotal() * (selectedClientObj.discountPercent / 100)) : 0,
       status,
       createdBy: currentUser?.name,
-      paymentMethod
+      paymentMethod,
+      csdBranch: selectedClientObj.name === 'CSD' ? csdBranch : undefined
     };
     
     setInvoices([...invoices, newInvoice]);
@@ -280,11 +208,13 @@ export const Billing: React.FC = () => {
         alert("Print area not found");
         return null;
       }
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const data = canvas.toDataURL("image/png");
+      const data = await htmlToImage.toPng(element, { pixelRatio: 2 });
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const img = new Image();
+      img.src = data;
+      await new Promise((resolve) => { img.onload = resolve; });
+      const pdfHeight = (img.height * pdfWidth) / img.width;
       pdf.addImage(data, "PNG", 0, 0, pdfWidth, pdfHeight);
       setIsGenerating(false);
       return pdf;
@@ -299,7 +229,8 @@ export const Billing: React.FC = () => {
   const handleDownload = async () => {
     const pdf = await generatePDF();
     if (pdf) {
-      pdf.save(`Invoice_${invoiceNo || Date.now().toString()}.pdf`);
+      const fileName = selectedClientObj.name === 'CSD' ? `CSD ${csdBranch || '___________________'} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${invoiceNo || Date.now().toString()}.pdf`;
+      pdf.save(fileName);
     }
   };
 
@@ -308,7 +239,8 @@ export const Billing: React.FC = () => {
     if (!pdf) return;
     try {
       const blob = pdf.output("blob");
-      const file = new File([blob], `Invoice_${invoiceNo || Date.now().toString()}.pdf`, { type: "application/pdf" });
+      const fileName = selectedClientObj.name === 'CSD' ? `CSD ${csdBranch || '___________________'} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${invoiceNo || Date.now().toString()}.pdf`;
+      const file = new File([blob], fileName, { type: "application/pdf" });
       if (navigator.share) {
         await navigator.share({ title: "Invoice", files: [file] });
       } else {
@@ -402,30 +334,22 @@ export const Billing: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">Select Client</label>
             <select 
               value={selectedClientId} 
-              onChange={(e) => { setSelectedClientId(e.target.value); setItems([]); setIsSaved(false); }}
+              onChange={(e) => { setSelectedClientId(e.target.value); setItems([]); setIsSaved(false); setCsdBranch(''); }}
               className="w-full px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#4097d0]"
             >
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           {selectedClientObj?.name === 'CSD' && (
-            <div>
+            <div className="flex-1 sm:flex-none sm:w-1/3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">CSD Branch/Warehouse</label>
               <input 
-                type="file" 
-                accept="image/*,application/pdf" 
-                ref={fileInputRef} 
-                onChange={handlePOUpload} 
-                className="hidden" 
+                type="text" 
+                value={csdBranch} 
+                onChange={(e) => setCsdBranch(e.target.value)} 
+                placeholder="e.g. Dhaka Cantt" 
+                className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#4097d0]"
               />
-              <button 
-                type="button" 
-                onClick={() => fileInputRef.current?.click()} 
-                disabled={isParsingPO}
-                className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
-              >
-                {isParsingPO ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-700 mr-2" /> : <Upload size={20} className="mr-2" />}
-                {isParsingPO ? "Parsing PO..." : "Upload CSD PO"}
-              </button>
             </div>
           )}
         </div>
@@ -437,6 +361,7 @@ export const Billing: React.FC = () => {
           selectedClientObj={selectedClientObj}
           items={items}
           date={new Date().toISOString()}
+          csdBranch={csdBranch}
         />
 
         <div className="print:hidden mt-8">

@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { FileText, XCircle, Search, Eye, Printer, Download, Share2 } from 'lucide-react';
 import { InvoiceTemplate } from '../components/InvoiceTemplate';
 import { useReactToPrint } from 'react-to-print';
-import html2canvas from 'html2canvas';
+import * as htmlToImage from 'html-to-image';
 import jsPDF from 'jspdf';
 import { Invoice } from '../types';
 
@@ -46,7 +46,8 @@ export const InvoiceHistory: React.FC = () => {
     if (!selectedInvoice) return;
     const pdf = await generatePDF();
     if (pdf) {
-      pdf.save(`Invoice_${selectedInvoice.id}.pdf`);
+      const fileName = selectedInvoice.clientId === 'CSD' ? `CSD ${selectedInvoice.csdBranch || '___________________'} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${selectedInvoice.id}.pdf`;
+      pdf.save(fileName);
     }
   };
 
@@ -56,7 +57,8 @@ export const InvoiceHistory: React.FC = () => {
     if (!pdf) return;
     try {
       const blob = pdf.output("blob");
-      const file = new File([blob], `Invoice_${selectedInvoice.id}.pdf`, { type: "application/pdf" });
+      const fileName = selectedInvoice.clientId === 'CSD' ? `CSD ${selectedInvoice.csdBranch || '___________________'} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${selectedInvoice.id}.pdf`;
+      const file = new File([blob], fileName, { type: "application/pdf" });
       if (navigator.share) {
         await navigator.share({ title: "Invoice", files: [file] });
       } else {
@@ -253,6 +255,7 @@ export const InvoiceHistory: React.FC = () => {
                   product: products.find(p => p.id === item.productId) || {} as any
                 }))}
                 date={selectedInvoice.date}
+                csdBranch={selectedInvoice.csdBranch}
               />
             </div>
             <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50">

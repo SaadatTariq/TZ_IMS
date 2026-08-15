@@ -60,6 +60,7 @@ export interface Invoice {
   paymentMethod?: 'Cash Sale' | 'Credit Sale';
   status: 'Pending Approval' | 'Approved' | 'Paid' | 'Unpaid' | 'Cancelled';
   createdBy?: string;
+  csdBranch?: string;
 }
 
 export type ShipmentStatus = 'In Transit' | 'Delivered' | 'Pending' | 'Customs Clearance' | 'Delayed';
