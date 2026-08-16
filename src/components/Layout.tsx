@@ -35,7 +35,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
   });
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] flex print:bg-white font-sans text-slate-800">
+    <div className="h-[100dvh] overflow-hidden bg-[#f4f7fb] flex print:bg-white print:h-auto print:overflow-visible font-sans text-slate-800">
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden transition-all duration-300" onClick={() => setSidebarOpen(false)} />
       )}
