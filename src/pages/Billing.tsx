@@ -38,7 +38,7 @@ const ProductSearch: React.FC<{
       <div className="relative">
         <input
           type="text"
-          className="w-full pl-8 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#4097d0]"
+          className="w-full pl-8 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#36609b]"
           placeholder="Search by Code (e.g. 1235)"
           value={isOpen ? searchTerm : selectedProduct?.code || ''}
           onChange={(e) => {
@@ -47,10 +47,10 @@ const ProductSearch: React.FC<{
           }}
           onFocus={() => setIsOpen(true)}
         />
-        <Search className="absolute left-2 top-2.5 text-gray-400" size={16} />
+        <Search className="absolute left-2 top-2.5 text-slate-400" size={16} />
       </div>
       {isOpen && (
-        <ul className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+        <ul className="absolute z-10 w-full mt-1 bg-white border rounded-xl shadow-lg max-h-60 overflow-auto">
           {filteredProducts.length > 0 ? (
             filteredProducts.map(p => (
               <li
@@ -63,11 +63,11 @@ const ProductSearch: React.FC<{
                 }}
               >
                 <span className="font-medium">{p.code}</span>
-                <span className="text-gray-500 truncate ml-2 text-xs">{p.description} (Stock: {p.stock})</span>
+                <span className="text-slate-500 truncate ml-2 text-xs">{p.description} (Stock: {p.stock})</span>
               </li>
             ))
           ) : (
-            <li className="px-3 py-2 text-sm text-gray-500">No products found.</li>
+            <li className="px-3 py-2 text-sm text-slate-500">No products found.</li>
           )}
         </ul>
       )}
@@ -90,6 +90,9 @@ export const Billing: React.FC = () => {
   });
   const [paymentMethod, setPaymentMethod] = useState<'Cash Sale' | 'Credit Sale'>('Cash Sale');
   const [csdBranch, setCsdBranch] = useState('');
+  const [shumisBranch, setShumisBranch] = useState('');
+  const shumisBranches = ["Sobhanbagh","Mohammadpur","Lalmatia","Kolabagan","Tajmahal Rd","Dhanmondi","Asadgate","Satmasjid Rd","Farmgate","Gulshan-1","Mirpur - 12","DOHS Mirpur","Ibrahimpur","Monipur Mirpur-2","Uttara 4","Uttara 6","Uttara 7","Khilgaon","Rampura","Wari","Banasree","Taltola","Eskaton","Tipu Sultan Rd"];
+
   
   const isAdmin = currentUser?.role === 'Admin';
   
@@ -158,13 +161,14 @@ export const Billing: React.FC = () => {
 
   const saveInvoice = () => {
     if (items.length === 0) return alert('Add items to generate invoice.');
+    if (selectedClientObj.name === 'Shumis' && !shumisBranch) return alert('Please select a Shumis branch.');
     
     const total = calculateTotal();
     const status = isAdmin ? 'Approved' : 'Pending Approval';
     const dateFormatted = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const invoiceTitle = selectedClientObj.name === 'CSD' 
       ? `CSD ${csdBranch || '___________________'} invoice dated ${dateFormatted}`
-      : `${selectedClientObj.name} Invoice Dated ${dateFormatted}`;
+      : selectedClientObj.name === 'Shumis' ? `Shumis ${shumisBranch || ''} invoice dated ${dateFormatted}` : `${selectedClientObj.name} Invoice Dated ${dateFormatted}`;
 
     const newInvoice: Invoice = {
       id: invoiceNo || Date.now().toString(),
@@ -177,7 +181,8 @@ export const Billing: React.FC = () => {
       status,
       createdBy: currentUser?.name,
       paymentMethod,
-      csdBranch: selectedClientObj.name === 'CSD' ? csdBranch : undefined
+      csdBranch: selectedClientObj.name === 'CSD' ? csdBranch : undefined,
+      shumisBranch: selectedClientObj.name === 'Shumis' ? shumisBranch : undefined
     };
     
     setInvoices([...invoices, newInvoice]);
@@ -209,13 +214,16 @@ export const Billing: React.FC = () => {
         return null;
       }
       const data = await htmlToImage.toPng(element, { pixelRatio: 2 });
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdf = new jsPDF({ orientation: "p", unit: "in", format: [8.4, 11.5] });
+      const pdfWidth = 7.9; // 8.4 minus margins
       const img = new Image();
       img.src = data;
       await new Promise((resolve) => { img.onload = resolve; });
       const pdfHeight = (img.height * pdfWidth) / img.width;
-      pdf.addImage(data, "PNG", 0, 0, pdfWidth, pdfHeight);
+      
+      // If height exceeds page minus margins (8.7"), it will overflow, but the pad is 11.5" total.
+      // Top margin: 1.4", Left margin: 0.25"
+      pdf.addImage(data, "PNG", 0.25, 1.4, pdfWidth, pdfHeight);
       setIsGenerating(false);
       return pdf;
     } catch (e: any) {
@@ -229,7 +237,7 @@ export const Billing: React.FC = () => {
   const handleDownload = async () => {
     const pdf = await generatePDF();
     if (pdf) {
-      const fileName = selectedClientObj.name === 'CSD' ? `CSD ${csdBranch || '___________________'} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${invoiceNo || Date.now().toString()}.pdf`;
+      const fileName = selectedClientObj.name === 'CSD' ? `CSD ${csdBranch || '___________________'} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : selectedClientObj.name === 'Shumis' ? `Shumis ${shumisBranch || ''} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${invoiceNo || Date.now().toString()}.pdf`;
       pdf.save(fileName);
     }
   };
@@ -239,7 +247,7 @@ export const Billing: React.FC = () => {
     if (!pdf) return;
     try {
       const blob = pdf.output("blob");
-      const fileName = selectedClientObj.name === 'CSD' ? `CSD ${csdBranch || '___________________'} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${invoiceNo || Date.now().toString()}.pdf`;
+      const fileName = selectedClientObj.name === 'CSD' ? `CSD ${csdBranch || '___________________'} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : selectedClientObj.name === 'Shumis' ? `Shumis ${shumisBranch || ''} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${invoiceNo || Date.now().toString()}.pdf`;
       const file = new File([blob], fileName, { type: "application/pdf" });
       if (navigator.share) {
         await navigator.share({ title: "Invoice", files: [file] });
@@ -295,24 +303,24 @@ export const Billing: React.FC = () => {
   return (
     <div className="space-y-6 print:m-0 print:p-0 print:space-y-0">
       <div className="print:hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Billing & Invoicing</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Billing & Invoicing</h1>
         <div className="flex space-x-3">
-          <button type="button" onClick={handlePrint} className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+          <button type="button" onClick={handlePrint} className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 shadow-sm transition-colors">
             <Printer size={20} className="mr-2" /> Print
           </button>
           {isSaved && (
             <>
-              <button type="button" onClick={handleDownload} disabled={isGenerating} className="flex items-center px-4 py-2 bg-blue-100 text-[#4097d0] rounded-lg hover:bg-blue-200 transition-colors">
+              <button type="button" onClick={handleDownload} disabled={isGenerating} className="flex items-center px-4 py-2 bg-[#36609b]/10 text-[#36609b] border border-[#36609b]/20 rounded-xl hover:bg-[#36609b]/20 shadow-sm transition-colors">
                 {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2" /> : <Download size={20} className="mr-2" />}
                 {isGenerating ? "Generating..." : "Download PDF"}
               </button>
-              <button type="button" onClick={handleShare} disabled={isGenerating} className="flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
+              <button type="button" onClick={handleShare} disabled={isGenerating} className="flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors">
                 {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2" /> : <Share2 size={20} className="mr-2" />}
                 {isGenerating ? "Processing..." : "Share"}
               </button>
             </>
           )}
-          <button type="button" onClick={saveInvoice} disabled={isSaved || items.length === 0} className="flex items-center px-4 py-2 bg-[#4097d0] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50">
+          <button type="button" onClick={saveInvoice} disabled={isSaved || items.length === 0} className="flex items-center px-4 py-2 bg-[#36609b] text-white shadow-md shadow-[#36609b]/20 hover:-translate-y-0.5 transition-all rounded-xl hover:bg-[#36609b] transition-colors disabled:opacity-50">
             {isAdmin ? <><CheckCircle size={20} className="mr-2" /> Approve & Save</> : <><Save size={20} className="mr-2" /> Submit for Approval</>}
           </button>
         </div>
@@ -320,36 +328,56 @@ export const Billing: React.FC = () => {
       
       <div className="print:hidden flex justify-end">
         <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium text-gray-700">Payment Method:</label>
-          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'Cash Sale' | 'Credit Sale')} className="px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#4097d0]">
+          <label className="text-sm font-medium text-slate-700">Payment Method:</label>
+          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'Cash Sale' | 'Credit Sale')} className="px-3 py-2 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#36609b]">
             <option value="Cash Sale">Cash Sale</option>
             <option value="Credit Sale">Credit Sale</option>
           </select>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 print:shadow-none print:border-none print:p-0">
-        <div className="mb-6 print:hidden flex items-end space-x-4">
-          <div className="flex-1 sm:flex-none sm:w-1/3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Client</label>
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60 print:shadow-none print:border-none print:p-0">
+        <div className="mb-6 print:hidden grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Select Client</label>
             <select 
               value={selectedClientId} 
-              onChange={(e) => { setSelectedClientId(e.target.value); setItems([]); setIsSaved(false); setCsdBranch(''); }}
-              className="w-full px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#4097d0]"
+              onChange={(e) => { setSelectedClientId(e.target.value); setItems([]); setIsSaved(false); setCsdBranch(''); setShumisBranch(''); }}
+              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none"
             >
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Payment Method</label>
+            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'Cash Sale' | 'Credit Sale')} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none">
+              <option value="Cash Sale">Cash Sale</option>
+              <option value="Credit Sale">Credit Sale</option>
+            </select>
+          </div>
           {selectedClientObj?.name === 'CSD' && (
-            <div className="flex-1 sm:flex-none sm:w-1/3">
-              <label className="block text-sm font-medium text-gray-700 mb-2">CSD Branch/Warehouse</label>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">CSD Branch/Warehouse</label>
               <input 
                 type="text" 
                 value={csdBranch} 
                 onChange={(e) => setCsdBranch(e.target.value)} 
                 placeholder="e.g. Dhaka Cantt" 
-                className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#4097d0]"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none"
               />
+            </div>
+          )}
+          {selectedClientObj?.name === 'Shumis' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Shumis Branch (Address)</label>
+              <select
+                value={shumisBranch}
+                onChange={(e) => setShumisBranch(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none"
+              >
+                <option value="" disabled>Select a branch</option>
+                {shumisBranches.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
             </div>
           )}
         </div>
@@ -362,26 +390,27 @@ export const Billing: React.FC = () => {
           items={items}
           date={new Date().toISOString()}
           csdBranch={csdBranch}
+          shumisBranch={shumisBranch}
         />
 
         <div className="print:hidden mt-8">
-          <button type="button" onClick={addItem} className="flex items-center text-sm text-[#4097d0] hover:text-blue-700 font-medium">
+          <button type="button" onClick={addItem} className="flex items-center text-sm text-[#36609b] hover:text-blue-700 font-medium">
             <Plus size={16} className="mr-1" /> Add Product Line
           </button>
         </div>
       </div>
 
       {/* Editor Section (Hidden in print) */}
-      <div className="print:hidden bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 className="text-lg font-bold mb-4 text-gray-900">Edit Line Items</h3>
+      <div className="print:hidden bg-white p-6 sm:p-8 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">Edit Line Items</h3>
         {items.length === 0 ? (
-          <p className="text-gray-500 text-sm">No items added to invoice.</p>
+          <p className="text-slate-500 text-sm">No items added to invoice.</p>
         ) : (
           <div className="space-y-4">
             {items.map((item, index) => (
-              <div key={index} className="flex flex-wrap gap-4 items-start bg-gray-50 p-4 rounded-lg border border-gray-100">
+              <div key={index} className="flex flex-wrap gap-4 items-start bg-slate-50 p-4 rounded-xl border border-slate-100">
                 <div className="flex-1 min-w-[250px]">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Product</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Product</label>
                   <ProductSearch 
                     products={products} 
                     selectedProduct={item.product} 
@@ -389,7 +418,7 @@ export const Billing: React.FC = () => {
                   />
                 </div>
                 <div className="w-24">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Quantity</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Quantity</label>
                   <input 
                     type="number" 
                     min="1"
@@ -400,22 +429,22 @@ export const Billing: React.FC = () => {
                       if (val > item.product.stock) val = item.product.stock;
                       updateItem(index, 'quantity', val);
                     }}
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none"
                   />
-                  <div className="text-[10px] text-gray-500 mt-1">Max: {item.product.stock}</div>
+                  <div className="text-[10px] text-slate-500 mt-1">Max: {item.product.stock}</div>
                 </div>
                 <div className="flex-1 min-w-[200px]">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Remark</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Remark</label>
                   <input 
                     type="text" 
                     value={item.remark}
                     onChange={(e) => updateItem(index, 'remark', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none"
                     placeholder="Optional remark..."
                   />
                 </div>
                 <div className="pt-5">
-                  <button type="button" onClick={() => removeItem(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Remove item">
+                  <button type="button" onClick={() => removeItem(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors" title="Remove item">
                     <Trash2 size={18} />
                   </button>
                 </div>

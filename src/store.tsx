@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Product, Invoice, PayrollEntry, LedgerEntry, Client, Shipment } from './types';
+import { User, Product, Invoice, PayrollEntry, LedgerEntry, Client, Shipment, ReturnEntry } from './types';
 import { db } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
@@ -7,6 +7,7 @@ interface StoreState {
   users: User[];
   products: Product[];
   invoices: Invoice[];
+  returns: ReturnEntry[];
   payroll: PayrollEntry[];
   ledger: LedgerEntry[];
   shipments: Shipment[];
@@ -18,6 +19,7 @@ interface StoreContextType extends StoreState {
   setUsers: (users: User[]) => void;
   setProducts: (products: Product[]) => void;
   setInvoices: (invoices: Invoice[]) => void;
+  setReturns: (returns: ReturnEntry[]) => void;
   setPayroll: (payroll: PayrollEntry[]) => void;
   setLedger: (ledger: LedgerEntry[]) => void;
   setShipments: (shipments: Shipment[]) => void;
@@ -34,9 +36,9 @@ const initialProducts: Product[] = [
 ];
 
 const initialUsers: User[] = [
-  { id: '1', name: 'Mohammed Tarique Ismail', role: 'Admin', email: 'admin1@tz.com', password: 'Admin001' },
-  { id: '2', name: 'Mohammed Saadat Tariq', role: 'Admin', email: 'admin2@tz.com', password: 'Admin002' },
-  { id: '3', name: 'Md Masum', role: 'Employee', email: 'masum@tz.com', password: 'Emp001' },
+  { id: '1', name: 'Mohammed Tarique Ismail', username: 'MTI01', role: 'Admin', email: 'admin1@tz.com', password: 'Admin001' },
+  { id: '2', name: 'Mohammed Saadat Tariq', username: 'MST02', role: 'Admin', email: 'admin2@tz.com', password: 'Admin002' },
+  { id: '3', name: 'Md Masum', username: 'MMEmp01', role: 'Employee', email: 'masum@tz.com', password: 'Emp001' },
 ];
 
 const initialClients: Client[] = [
@@ -53,6 +55,7 @@ const initialState: StoreState = {
   users: initialUsers,
   products: initialProducts,
   invoices: [],
+  returns: [],
   payroll: [],
   ledger: [],
   shipments: [],
@@ -92,6 +95,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           data.users = initialUsers;
           updatePayload.users = initialUsers;
           needsUpdate = true;
+        } else {
+          // Add usernames if they don't exist
+          let usersUpdated = false;
+          data.users = data.users.map(u => {
+             if (!u.username) {
+               usersUpdated = true;
+               if (u.name === 'Mohammed Tarique Ismail') return { ...u, username: 'MTI01' };
+               if (u.name === 'Mohammed Saadat Tariq') return { ...u, username: 'MST02' };
+               if (u.name === 'Md Masum' || u.name === 'Masum') return { ...u, username: 'MMEmp01' };
+               return { ...u, username: u.name.replace(/s+/g, '').toLowerCase() }; // Fallback
+             }
+             return u;
+          });
+          if (usersUpdated) {
+            updatePayload.users = data.users;
+            needsUpdate = true;
+          }
         }
 
         if (!data.clients || data.clients.length === 0) {
@@ -107,6 +127,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
 
         if (!data.invoices) { data.invoices = []; updatePayload.invoices = []; needsUpdate = true; }
+        if (!data.returns) { data.returns = []; updatePayload.returns = []; needsUpdate = true; }
         if (!data.payroll) { data.payroll = []; updatePayload.payroll = []; needsUpdate = true; }
         if (!data.ledger) { data.ledger = []; updatePayload.ledger = []; needsUpdate = true; }
         if (!data.shipments) { data.shipments = []; updatePayload.shipments = []; needsUpdate = true; }
@@ -178,6 +199,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setLedger: (ledger) => updateState('ledger', ledger),
         setShipments: (shipments) => updateState('shipments', shipments),
         setClients: (clients) => updateState('clients', clients),
+        setReturns: (returns) => updateState('returns', returns),
         setCurrentUser: (user) => updateState('currentUser', user),
       }}
     >

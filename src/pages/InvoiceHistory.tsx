@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { FileText, XCircle, Search, Eye, Printer, Download, Share2 } from 'lucide-react';
 import { InvoiceTemplate } from '../components/InvoiceTemplate';
 import { useReactToPrint } from 'react-to-print';
-import * as htmlToImage from 'html-to-image';
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Invoice } from '../types';
 
@@ -29,7 +29,7 @@ export const InvoiceHistory: React.FC = () => {
       
       
       const data = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
+      const pdf = new jsPDF({ orientation: "p", unit: "in", format: [8.4, 11.5] });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       pdf.addImage(data, "PNG", 0, 0, pdfWidth, pdfHeight);
@@ -46,7 +46,7 @@ export const InvoiceHistory: React.FC = () => {
     if (!selectedInvoice) return;
     const pdf = await generatePDF();
     if (pdf) {
-      const fileName = selectedInvoice.clientId === 'CSD' ? `CSD ${selectedInvoice.csdBranch || '___________________'} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${selectedInvoice.id}.pdf`;
+      const fileName = selectedInvoice.clientId === 'CSD' ? `CSD ${selectedInvoice.csdBranch || '___________________'} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : selectedInvoice.clientId === 'Shumis' ? `Shumis ${selectedInvoice.shumisBranch || ''} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${selectedInvoice.id}.pdf`;
       pdf.save(fileName);
     }
   };
@@ -57,7 +57,7 @@ export const InvoiceHistory: React.FC = () => {
     if (!pdf) return;
     try {
       const blob = pdf.output("blob");
-      const fileName = selectedInvoice.clientId === 'CSD' ? `CSD ${selectedInvoice.csdBranch || '___________________'} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${selectedInvoice.id}.pdf`;
+      const fileName = selectedInvoice.clientId === 'CSD' ? `CSD ${selectedInvoice.csdBranch || '___________________'} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : selectedInvoice.clientId === 'Shumis' ? `Shumis ${selectedInvoice.shumisBranch || ''} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${selectedInvoice.id}.pdf`;
       const file = new File([blob], fileName, { type: "application/pdf" });
       if (navigator.share) {
         await navigator.share({ title: "Invoice", files: [file] });
@@ -114,19 +114,19 @@ export const InvoiceHistory: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Invoice History</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Invoice History</h1>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center bg-gray-50">
+      <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center bg-slate-50">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input 
               type="text" 
               placeholder="Search by ID or Title..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4097d0]"
+              className="w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#36609b]"
             />
           </div>
         </div>
@@ -134,25 +134,25 @@ export const InvoiceHistory: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-gray-50 text-gray-600 text-xs tracking-wider uppercase">
-                <th className="p-4 border-b">Date</th>
-                <th className="p-4 border-b">Invoice ID</th>
-                <th className="p-4 border-b">Title</th>
-                <th className="p-4 border-b">Client</th>
-                <th className="p-4 border-b text-right">Total</th>
-                <th className="p-4 border-b">Status</th>
-                <th className="p-4 border-b text-center">Actions</th>
+              <tr className="bg-slate-50 text-slate-600 text-xs tracking-wider uppercase">
+                <th className="p-4 align-middle border-b">Date</th>
+                <th className="p-4 align-middle border-b">Invoice ID</th>
+                <th className="p-4 align-middle border-b">Title</th>
+                <th className="p-4 align-middle border-b">Client</th>
+                <th className="p-4 align-middle border-b text-right">Total</th>
+                <th className="p-4 align-middle border-b">Status</th>
+                <th className="p-4 align-middle border-b text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {filteredInvoices.map(inv => (
-                <tr key={inv.id} className="border-b hover:bg-gray-50 transition-colors">
-                  <td className="p-4">{new Date(inv.date).toLocaleDateString()}</td>
-                  <td className="p-4 font-medium">{inv.id}</td>
-                  <td className="p-4">{inv.title || '-'}</td>
-                  <td className="p-4">{inv.clientId}</td>
-                  <td className="p-4 text-right">৳{inv.total.toFixed(2)}</td>
-                  <td className="p-4">
+                <tr key={inv.id} className="border-b hover:bg-slate-50 transition-colors">
+                  <td className="p-4 align-middle">{new Date(inv.date).toLocaleDateString()}</td>
+                  <td className="p-4 align-middle font-medium">{inv.id}</td>
+                  <td className="p-4 align-middle">{inv.title || '-'}</td>
+                  <td className="p-4 align-middle">{inv.clientId}</td>
+                  <td className="p-4 align-middle text-right">৳{inv.total.toFixed(2)}</td>
+                  <td className="p-4 align-middle">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium 
                       ${inv.status === 'Approved' || inv.status === 'Paid' ? 'bg-green-100 text-green-800' : 
                         inv.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
@@ -160,11 +160,11 @@ export const InvoiceHistory: React.FC = () => {
                       {inv.status}
                     </span>
                   </td>
-                  <td className="p-4">
+                  <td className="p-4 align-middle">
                     <div className="flex justify-center space-x-2">
                       <button 
                         onClick={() => setSelectedInvoice(inv)} 
-                        className="text-[#4097d0] hover:bg-blue-50 p-1 rounded"
+                        className="text-[#36609b] hover:bg-blue-50 p-1 rounded"
                         title="View Details"
                       >
                         <Eye size={18} />
@@ -184,29 +184,29 @@ export const InvoiceHistory: React.FC = () => {
               ))}
             </tbody>
           </table>
-          {filteredInvoices.length === 0 && <div className="p-8 text-center text-gray-500">No invoices found.</div>}
+          {filteredInvoices.length === 0 && <div className="p-8 text-center text-slate-500">No invoices found.</div>}
         </div>
       </div>
 
       {/* Invoice Details Modal */}
       {selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#a5bd55] bg-opacity-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">Invoice Details - {selectedInvoice.id}</h2>
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h2 className="text-xl font-bold text-slate-800">Invoice Details - {selectedInvoice.id}</h2>
               <div className="flex space-x-2">
-                <button onClick={handlePrint} className="flex items-center px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                <button onClick={handlePrint} className="flex items-center px-3 py-1.5 bg-gray-200 text-slate-700 rounded-xl hover:bg-gray-300">
                   <Printer size={16} className="mr-1" /> Print
                 </button>
-                <button onClick={handleDownload} disabled={isGenerating} className="flex items-center px-3 py-1.5 bg-blue-100 text-[#4097d0] rounded-lg hover:bg-blue-200">
+                <button onClick={handleDownload} disabled={isGenerating} className="flex items-center px-3 py-1.5 bg-[#36609b]/10 text-[#36609b] border border-[#36609b]/20 rounded-xl hover:bg-[#36609b]/20 shadow-sm">
                   {isGenerating ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-1" /> : <Download size={16} className="mr-1" />}
                   Download
                 </button>
-                <button onClick={handleShare} disabled={isGenerating} className="flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200">
+                <button onClick={handleShare} disabled={isGenerating} className="flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200">
                   {isGenerating ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-1" /> : <Share2 size={16} className="mr-1" />}
                   Share
                 </button>
-                <button onClick={() => setSelectedInvoice(null)} className="ml-2 text-gray-500 hover:text-gray-700">
+                <button onClick={() => setSelectedInvoice(null)} className="ml-2 text-slate-500 hover:text-slate-700">
                   <XCircle size={24} />
                 </button>
               </div>
@@ -221,7 +221,7 @@ export const InvoiceHistory: React.FC = () => {
               </div>
               <table className="w-full text-left border-collapse mt-4">
                 <thead>
-                  <tr className="bg-gray-50 text-gray-600 text-xs tracking-wider uppercase border-y">
+                  <tr className="bg-slate-50 text-slate-600 text-xs tracking-wider uppercase border-y">
                     <th className="py-2 px-4">Item Code / Description</th>
                     <th className="py-2 px-4 text-right">Qty</th>
                   </tr>
@@ -256,12 +256,13 @@ export const InvoiceHistory: React.FC = () => {
                 }))}
                 date={selectedInvoice.date}
                 csdBranch={selectedInvoice.csdBranch}
+                shumisBranch={selectedInvoice.shumisBranch}
               />
             </div>
-            <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50">
+            <div className="p-4 border-t border-slate-100 flex justify-end bg-slate-50">
               <button 
                 onClick={() => setSelectedInvoice(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 bg-gray-200 text-slate-800 rounded-xl hover:bg-gray-300 transition-colors"
               >
                 Close
               </button>

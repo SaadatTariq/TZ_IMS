@@ -57,16 +57,16 @@ export const Clients: React.FC = () => {
   };
 
   if (!isAdmin) {
-    return <div className="p-8 text-center text-gray-500">Only administrators can manage clients.</div>;
+    return <div className="p-8 text-center text-slate-500">Only administrators can manage clients.</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Client Management</h1>
         <button 
           onClick={() => { resetForm(); setIsAdding(true); }}
-          className="flex items-center px-4 py-2 bg-[#4097d0] text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="flex items-center px-4 py-2 bg-[#36609b] text-white shadow-md shadow-[#36609b]/20 hover:-translate-y-0.5 transition-all rounded-xl hover:bg-[#36609b] transition-colors"
         >
           <Plus size={20} className="mr-2" />
           Add Client
@@ -74,24 +74,24 @@ export const Clients: React.FC = () => {
       </div>
 
       {isAdding && (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60">
           <h2 className="text-lg font-bold mb-4">{formData.id ? 'Edit Client' : 'New Client'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">System Name (Internal)</label>
-              <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border rounded-md" placeholder="e.g. CSD" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">System Name (Internal)</label>
+              <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" placeholder="e.g. CSD" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Display Company Name (Invoice)</label>
-              <input type="text" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} className="w-full px-3 py-2 border rounded-md" placeholder="Leave blank if dynamic" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Display Company Name (Invoice)</label>
+              <input type="text" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" placeholder="Leave blank if dynamic" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address (Invoice)</label>
-              <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-3 py-2 border rounded-md" placeholder="Leave blank if dynamic" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Address (Invoice)</label>
+              <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" placeholder="Leave blank if dynamic" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Default Price Field</label>
-              <select value={formData.priceField} onChange={e => setFormData({...formData, priceField: e.target.value as any})} className="w-full px-3 py-2 border rounded-md">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Default Price Field</label>
+              <select value={formData.priceField} onChange={e => setFormData({...formData, priceField: e.target.value as any})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none">
                 <option value="cpu">CPU</option>
                 <option value="mrp">MRP</option>
                 <option value="tpCsd">TP (CSD)</option>
@@ -103,46 +103,46 @@ export const Clients: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Discount %</label>
-              <input type="number" min="0" max="100" step="1" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: Number(e.target.value)})} className="w-full px-3 py-2 border rounded-md" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Discount %</label>
+              <input type="number" min="0" max="100" step="1" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: Number(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Table Headers (Comma separated)</label>
-              <input required type="text" value={headerInput} onChange={e => setHeaderInput(e.target.value)} className="w-full px-3 py-2 border rounded-md font-mono text-sm" placeholder="S.L No, Item Code, Description, Quantity, CPU, Total, Remark" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Invoice Table Headers (Comma separated)</label>
+              <input required type="text" value={headerInput} onChange={e => setHeaderInput(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" placeholder="S.L No, Item Code, Description, Quantity, CPU, Total, Remark" />
             </div>
             
             <div className="md:col-span-2 flex justify-end gap-3 mt-2">
-              <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-[#a5bd55] text-white rounded-lg hover:bg-[#8da742]">Save Client</button>
+              <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 bg-gray-100 rounded-xl hover:bg-gray-200">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-[#a5bd55] text-white shadow-md shadow-[#a5bd55]/20 hover:-translate-y-0.5 transition-all rounded-xl hover:bg-[#8da742]">Save Client</button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-gray-600 text-sm">
-                <th className="p-4 border-b">Internal Name</th>
-                <th className="p-4 border-b">Display Name</th>
-                <th className="p-4 border-b">Price Field</th>
-                <th className="p-4 border-b">Headers (Columns)</th>
-                <th className="p-4 border-b text-center">Actions</th>
+              <tr className="bg-slate-50/80 text-slate-500 text-[11px] uppercase tracking-wider font-bold">
+                <th className="p-4 align-middle border-b">Internal Name</th>
+                <th className="p-4 align-middle border-b">Display Name</th>
+                <th className="p-4 align-middle border-b">Price Field</th>
+                <th className="p-4 align-middle border-b">Headers (Columns)</th>
+                <th className="p-4 align-middle border-b text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {clients.map(c => (
-                <tr key={c.id} className="border-b hover:bg-gray-50">
-                  <td className="p-4 font-medium">{c.name}</td>
-                  <td className="p-4 text-gray-500">{c.displayName || '-'}</td>
-                  <td className="p-4 text-sm"><span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full">{c.priceField}</span></td>
-                  <td className="p-4 text-xs text-gray-500 max-w-xs truncate" title={c.headers.join(', ')}>
+                <tr key={c.id} className="border-b hover:bg-slate-50">
+                  <td className="p-4 align-middle font-medium">{c.name}</td>
+                  <td className="p-4 align-middle text-slate-500">{c.displayName || '-'}</td>
+                  <td className="p-4 align-middle text-sm"><span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full">{c.priceField}</span></td>
+                  <td className="p-4 align-middle text-xs text-slate-500 max-w-xs truncate" title={c.headers.join(', ')}>
                     {c.headers.join(', ')}
                   </td>
-                  <td className="p-4">
+                  <td className="p-4 align-middle">
                     <div className="flex justify-center space-x-2">
-                      <button onClick={() => editClient(c)} className="text-[#4097d0] hover:bg-blue-50 p-1 rounded"><Edit2 size={18} /></button>
+                      <button onClick={() => editClient(c)} className="text-[#36609b] hover:bg-blue-50 p-1 rounded"><Edit2 size={18} /></button>
                       <button onClick={() => deleteClient(c.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={18} /></button>
                     </div>
                   </td>

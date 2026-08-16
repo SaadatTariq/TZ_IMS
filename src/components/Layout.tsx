@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { LayoutDashboard, Receipt, Package, Users, Wallet, BookOpen, Truck, Menu, X, LogOut, History } from 'lucide-react';
+import { LayoutDashboard, Receipt, Package, Users, Wallet, BookOpen, Truck, Menu, X, LogOut, History, MapPin, RotateCcw } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,11 +12,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
   const { currentUser, setCurrentUser } = useStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Define all available navigation items
   const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'billing', label: 'Billing', icon: Receipt },
     { id: 'invoice-history', label: 'Invoice History', icon: History },
+    { id: 'delivery-tracker', label: 'Delivery Tracker', icon: MapPin },
+    { id: 'returns', label: 'Returns & Credits', icon: RotateCcw },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'ledger', label: 'Ledger', icon: BookOpen },
     { id: 'shipments', label: 'Shipments', icon: Truck },
@@ -25,78 +26,86 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
     { id: 'users', label: 'Users', icon: Users },
   ];
 
-  // Filter based on user role and permissions
   const navItems = allNavItems.filter(item => {
-    if (currentUser?.role === 'Admin') return true; // Admins see everything
+    if (currentUser?.role === 'Admin') return true;
     if (!currentUser?.accessibleFeatures) {
-      // Fallback for older users without explicit permissions
       return ['dashboard', 'billing', 'invoice-history', 'inventory', 'ledger'].includes(item.id);
     }
     return currentUser.accessibleFeatures.includes(item.id);
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex print:bg-white">
-      {/* Mobile sidebar overlay */}
+    <div className="min-h-screen bg-[#f4f7fb] flex print:bg-white font-sans text-slate-800">
       {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden print:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden transition-all duration-300" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-[#36609b] text-white transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-0 print:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between h-16 px-6 bg-[#2a4d7d]">
-          <div className="flex items-center">
-            <img src="/logo.png" alt="Logo" className="h-8 w-auto mr-3 bg-white p-1 rounded object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-            <span className="text-sm font-bold tracking-wider truncate">T&Z DISTRIBUTION</span>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[#1e2a40] text-slate-300 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 print:hidden shadow-xl lg:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex items-center justify-between h-16 px-6 bg-[#172133] shrink-0 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="bg-white p-1 rounded-md shadow-sm">
+              <img src="/logo.png" alt="Logo" className="h-6 w-auto object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+            </div>
+            <span className="text-sm font-bold tracking-widest text-white">T&Z IMS</span>
           </div>
-          <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
-            <X size={24} />
+          <button className="lg:hidden text-slate-400 hover:text-white" onClick={() => setSidebarOpen(false)}>
+            <X size={20} />
           </button>
         </div>
-        <nav className="mt-6 px-4 space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                setSidebarOpen(false);
-              }}
-              className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors ${activeTab === item.id ? 'bg-[#4097d0] text-white' : 'text-gray-300 hover:bg-[#2a4d7d] hover:text-white'}`}
-            >
-              <item.icon className="mr-3" size={20} />
-              {item.label}
-            </button>
-          ))}
+        
+        <div className="px-4 py-4 shrink-0">
+          <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2 px-2">Main Menu</p>
+        </div>
+
+        <nav className="px-3 pb-6 space-y-1 flex-1 overflow-y-auto custom-scrollbar">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                className={`w-full group flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 font-medium text-sm relative ${isActive ? 'bg-[#36609b]/40 text-white' : 'hover:bg-white/5 hover:text-white'}`}
+              >
+                {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#a5bd55] rounded-r-full" />}
+                <item.icon className={`mr-3 transition-colors ${isActive ? 'text-[#a5bd55]' : 'text-slate-400 group-hover:text-slate-200'}`} size={18} />
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
+
+        <div className="p-4 shrink-0 border-t border-white/5 bg-[#172133]/50">
+          <div className="flex items-center gap-3">
+             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#36609b] to-[#2a4d7d] flex items-center justify-center text-white font-bold shadow-inner ring-2 ring-white/10 shrink-0">
+               {currentUser?.name?.charAt(0) || 'U'}
+             </div>
+             <div className="flex-1 min-w-0 text-left">
+               <p className="text-sm font-medium text-white truncate">{currentUser?.name}</p>
+               <p className="text-xs text-slate-400 truncate">{currentUser?.role}</p>
+             </div>
+             <button onClick={() => setCurrentUser(null)} className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors shrink-0" title="Sign Out">
+               <LogOut size={16} />
+             </button>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible">
-        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 print:hidden">
-          <button className="text-gray-500 lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu size={24} />
-          </button>
-          <div className="flex-1" />
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center bg-[#a5bd55] text-white px-3 py-1 rounded-full text-sm font-medium">
-              <div className="w-2 h-2 rounded-full bg-white mr-2" />
-              {currentUser?.name} ({currentUser?.role})
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible relative">
+        <header className="bg-transparent h-6 sm:h-8 shrink-0 print:hidden"></header>
+        
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 pt-0 print:p-0 print:overflow-visible">
+          <div className="max-w-[1600px] mx-auto">
+            <div className="print:hidden lg:hidden flex items-center justify-between mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+               <button className="text-slate-500 hover:text-slate-900" onClick={() => setSidebarOpen(true)}>
+                 <Menu size={20} />
+               </button>
+               <h1 className="text-lg font-semibold text-slate-800 capitalize">
+                 {activeTab.replace('-', ' ')}
+               </h1>
+               <div className="w-5"></div>
             </div>
-            <button 
-              onClick={() => setCurrentUser(null)}
-              className="p-2 text-gray-500 hover:text-red-600 transition-colors"
-              title="Sign Out"
-            >
-              <LogOut size={20} />
-            </button>
+            {children}
           </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 print:p-0 print:overflow-visible">
-          {children}
         </main>
       </div>
     </div>

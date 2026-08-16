@@ -3,6 +3,7 @@ export type Role = 'Admin' | 'Employee';
 export interface User {
   id: string;
   name: string;
+  username?: string;
   role: Role;
   email: string;
   password?: string;
@@ -61,6 +62,9 @@ export interface Invoice {
   status: 'Pending Approval' | 'Approved' | 'Paid' | 'Unpaid' | 'Cancelled';
   createdBy?: string;
   csdBranch?: string;
+  shumisBranch?: string;
+  deliveryStatus?: 'Pending' | 'Dispatched' | 'Delivered';
+  deliveryDate?: string;
 }
 
 export type ShipmentStatus = 'In Transit' | 'Delivered' | 'Pending' | 'Customs Clearance' | 'Delayed';
@@ -94,3 +98,21 @@ export interface LedgerEntry {
   credit: number;
 }
 
+
+export interface ReturnItem {
+  productId: string;
+  quantity: number;
+  price: number;
+  reason: 'Damaged' | 'Expired' | 'Wrong Item' | 'Other';
+  action: 'Return to Stock' | 'Write Off';
+}
+
+export interface ReturnEntry {
+  id: string;
+  date: string;
+  clientId: string;
+  items: ReturnItem[];
+  totalValue: number;
+  status: 'Processed';
+  notes?: string;
+}

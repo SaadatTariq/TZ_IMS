@@ -8,10 +8,11 @@ interface InvoiceTemplateProps {
   items: (InvoiceItem & { product: Product })[];
   date: string; // ISO string or formatted string
   csdBranch?: string;
+  shumisBranch?: string;
 }
 
 export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({
-  invoiceNo, selectedClientObj, items, date, csdBranch
+  invoiceNo, selectedClientObj, items, date, csdBranch, shumisBranch
 }, ref) => {
   const getUnitPrice = (p: Product) => {
     if (!selectedClientObj) return p.cpu;
@@ -64,21 +65,33 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   };
 
   const chunkedItems = [];
-  for (let i = 0; i < items.length; i += 20) {
-    chunkedItems.push(items.slice(i, i + 20));
+  for (let i = 0; i < items.length; i += 15) {
+    chunkedItems.push(items.slice(i, i + 15));
   }
   if (chunkedItems.length === 0) chunkedItems.push([]);
 
   const formattedDate = new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
 
   return (
-    <div id="invoice-print-area" ref={ref} className="bg-white p-4">
+    <>
+      <style type="text/css" media="print">
+        {`
+          @page {
+            size: 8.4in 11.5in;
+            margin-top: 1.4in;
+            margin-bottom: 1.4in;
+            margin-left: 0.25in;
+            margin-right: 0.25in;
+          }
+        `}
+      </style>
+      <div id="invoice-print-area" ref={ref} className="bg-white p-4">
       {chunkedItems.map((pageItems, pageIndex) => {
         const isLastPage = pageIndex === chunkedItems.length - 1;
-        const globalStartIndex = pageIndex * 20;
+        const globalStartIndex = pageIndex * 15;
         return (
           <div key={pageIndex} className="font-sans text-black print:page-break-after">
-            <h1 className="text-xl font-bold text-center mb-6 mt-8 print:mt-16">Invoice</h1>
+            <h1 className="text-xl font-bold text-center mb-6 print:mt-0">Invoice</h1>
             
             <div className="flex justify-between mb-4">
               <div>
@@ -89,7 +102,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                 {selectedClientObj?.name !== 'CSD' && (
                   <div className="flex items-center mb-1">
                     <span className="font-semibold mr-2">Address:</span> 
-                    <span>{selectedClientObj?.address}</span>
+                    <span>{selectedClientObj?.name === 'Shumis' ? shumisBranch : selectedClientObj?.address}</span>
                   </div>
                 )}
                 <div className="flex items-center mt-1">
@@ -170,5 +183,6 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
         );
       })}
     </div>
+    </>
   );
 });

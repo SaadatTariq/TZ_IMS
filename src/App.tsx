@@ -15,6 +15,8 @@ import { Payroll } from './pages/Payroll';
 import { Ledger } from './pages/Ledger';
 import { Users } from './pages/Users';
 import { Clients } from './pages/Clients';
+import { Returns } from './pages/Returns';
+import { DeliveryTracker } from './pages/DeliveryTracker';
 import { Login } from './pages/Login';
 
 function AppContent() {
@@ -43,6 +45,8 @@ function AppContent() {
       case 'ledger': return <Ledger />;
       case 'users': return <Users />;
       case 'clients': return <Clients />;
+      case 'returns': return <Returns />;
+      case 'delivery-tracker': return <DeliveryTracker />;
       default: return <Dashboard />;
     }
   };

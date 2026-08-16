@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../store';
 import { Package, Receipt, Wallet, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from 'recharts';
 
 export const Dashboard: React.FC = () => {
   const { products, invoices, setInvoices, setProducts, currentUser } = useStore();
@@ -18,8 +18,8 @@ export const Dashboard: React.FC = () => {
   const pendingInvoices = invoices.filter(i => i.status === 'Pending Approval');
 
   const stats = [
-    { title: 'Total Revenue', value: `৳ ${totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-[#4097d0]', bg: 'bg-blue-100' },
-    { title: 'Total Products', value: totalProducts, icon: Package, color: 'text-[#a5bd55]', bg: 'bg-green-100' },
+    { title: 'Total Revenue', value: `৳ ${totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-[#36609b]', bg: 'bg-blue-100' },
+    { title: 'Total Products', value: totalProducts, icon: Package, color: 'text-slate-800', bg: 'bg-gray-100' },
     { title: 'Low Stock (< 100)', value: lowStock, icon: Receipt, color: 'text-orange-600', bg: 'bg-orange-100' },
     { title: 'Out of Stock', value: outOfStock, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100' },
   ];
@@ -97,21 +97,21 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-[#2a4d7d] to-[#4097d0] rounded-xl p-8 text-white shadow-md">
+      <div className="bg-gradient-to-r from-[#2a4d7d] to-[#4097d0] rounded-xl p-6 sm:p-8 text-white shadow-md">
         <h1 className="text-3xl font-bold mb-2">Welcome back, {greetingName}!</h1>
         <p className="text-blue-100">Here's what's happening with your inventory and sales today.</p>
       </div>
       
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div key={idx} className="bg-white p-6 sm:p-8 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60">
             <div className="flex items-center">
-              <div className={`p-3 rounded-lg ${stat.bg}`}>
+              <div className={`p-3 rounded-xl ${stat.bg}`}>
                 <stat.icon className={`w-6 h-6 ${stat.color}`} />
               </div>
               <div className="ml-4 flex-1">
-                <p className="text-sm font-medium text-gray-500">{stat.title}</p>
-                <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                <p className="text-sm font-medium text-slate-500">{stat.title}</p>
+                <p className="text-2xl font-semibold text-slate-900">{stat.value}</p>
               </div>
             </div>
           </div>
@@ -125,16 +125,16 @@ export const Dashboard: React.FC = () => {
           </h2>
           <div className="space-y-4">
             {pendingInvoices.map(inv => (
-              <div key={inv.id} className="flex justify-between items-center p-4 border border-yellow-200 rounded-lg bg-white">
+              <div key={inv.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-4 border border-yellow-200 rounded-xl bg-white gap-4">
                 <div>
-                  <p className="font-semibold text-gray-900">Client: {inv.title || inv.clientId}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="font-semibold text-slate-900">Client: {inv.title || inv.clientId}</p>
+                  <p className="text-sm text-slate-500">
                     Created by {inv.createdBy || 'Unknown'} on {new Date(inv.date).toLocaleDateString()}
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">{inv.items.length} items</p>
+                  <p className="text-sm text-slate-600 mt-1">{inv.items.length} items</p>
                 </div>
-                <div className="text-right flex flex-col items-end gap-2">
-                  <p className="font-bold text-gray-900">৳ {inv.total.toLocaleString()}</p>
+                <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-start w-full sm:w-auto gap-2">
+                  <p className="font-bold text-slate-900">৳ {inv.total.toLocaleString()}</p>
                   <button 
                     onClick={() => approveInvoice(inv.id)}
                     className="flex items-center px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
@@ -149,8 +149,8 @@ export const Dashboard: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Monthly Sales Trends</h2>
+        <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60 p-6">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Monthly Sales Trends</h2>
           <div className="h-64">
             {monthlySalesData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -163,15 +163,15 @@ export const Dashboard: React.FC = () => {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-400">
+              <div className="h-full flex items-center justify-center text-slate-400">
                 No sales data available
               </div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Product Demand (Top 5)</h2>
+        <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60 p-6">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Product Demand (Top 5)</h2>
           <div className="h-64">
             {demandData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -184,21 +184,21 @@ export const Dashboard: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-400">
+              <div className="h-full flex items-center justify-center text-slate-400">
                 No data available for charts
               </div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Stock Alerts</h2>
+        <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60 p-6">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Stock Alerts</h2>
           <div className="space-y-4 max-h-64 overflow-y-auto">
             {products.filter(p => p.stock <= 100).sort((a, b) => a.stock - b.stock).map(p => (
-              <div key={p.id} className={`flex justify-between items-center p-4 border rounded-lg ${p.stock === 0 ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
+              <div key={p.id} className={`flex justify-between items-center p-4 border rounded-xl ${p.stock === 0 ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
                 <div>
-                  <p className="font-semibold text-gray-900">{p.description}</p>
-                  <p className="text-sm text-gray-500">Code: {p.code}</p>
+                  <p className="font-semibold text-slate-900">{p.description}</p>
+                  <p className="text-sm text-slate-500">Code: {p.code}</p>
                 </div>
                 <div className="text-right">
                   <p className={`font-bold ${p.stock === 0 ? 'text-red-600' : 'text-orange-600'}`}>{p.stock} {p.unit}</p>
@@ -208,7 +208,7 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
             ))}
-            {(outOfStock + lowStock) === 0 && <p className="text-gray-500 text-center py-4">All stock levels are healthy.</p>}
+            {(outOfStock + lowStock) === 0 && <p className="text-slate-500 text-center py-4">All stock levels are healthy.</p>}
           </div>
         </div>
       </div>
