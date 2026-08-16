@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 import { Product } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
 import { Plus, Search, Edit2, Trash2, Upload, Download } from 'lucide-react';
@@ -8,6 +9,7 @@ import Papa from 'papaparse';
 export const Inventory: React.FC = () => {
   const { products, setProducts, currentUser, invoices } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isAdmin = currentUser?.role === 'Admin';
@@ -149,6 +151,7 @@ export const Inventory: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Inventory Management</h1>
         <div className="flex flex-wrap items-center gap-2">

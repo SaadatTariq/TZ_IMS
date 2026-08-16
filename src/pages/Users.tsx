@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 import { User, Role } from '../types';
 import { Plus, Trash2, Shield, Edit2 } from 'lucide-react';
 
@@ -55,6 +56,7 @@ export const Users: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPendingAction(() => () => {
     if (editingUserId) {
       setUsers(users.map(u => u.id === editingUserId ? { ...u, ...formData } as User : u));
     } else {
@@ -66,17 +68,21 @@ export const Users: React.FC = () => {
     }
     setIsFormOpen(false);
     setFormData({ name: '', username: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: '' });
+    });
   };
 
   const confirmDelete = () => {
     if (userToDelete) {
-      setUsers(users.filter(u => u.id !== userToDelete));
-      setUserToDelete(null);
+      setPendingAction(() => () => {
+        setUsers(users.filter(u => u.id !== userToDelete));
+        setUserToDelete(null);
+      });
     }
   };
 
   return (
     <div className="space-y-6">
+      <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-900">User Management & Locks</h1>
         <button 

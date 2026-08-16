@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import { useReactToPrint } from 'react-to-print';
 import { numberToWords } from '../utils';
 import { InvoiceTemplate } from '../components/InvoiceTemplate';
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 
 // Helper component for Product Search
 const ProductSearch: React.FC<{
@@ -82,6 +83,7 @@ export const Billing: React.FC = () => {
   
   const [isSaved, setIsSaved] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const [invoiceNo, setInvoiceNo] = useState('');
   const handlePrint = useReactToPrint({
@@ -159,7 +161,13 @@ export const Billing: React.FC = () => {
     return Math.round(subTotal - discount);
   };
 
+  
   const saveInvoice = () => {
+    if (items.length === 0) return;
+    setPendingAction(() => performSaveInvoice);
+  };
+
+  const performSaveInvoice = () => {
     if (items.length === 0) return alert('Add items to generate invoice.');
     if (selectedClientObj.name === 'Shumis' && !shumisBranch) return alert('Please select a Shumis branch.');
     
@@ -302,6 +310,7 @@ export const Billing: React.FC = () => {
 
   return (
     <div className="space-y-6 print:m-0 print:p-0 print:space-y-0">
+      <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="print:hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Billing & Invoicing</h1>
         <div className="flex space-x-3">

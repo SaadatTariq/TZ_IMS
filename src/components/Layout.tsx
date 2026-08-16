@@ -91,11 +91,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible relative">
-        <header className="bg-transparent h-6 sm:h-8 shrink-0 print:hidden"></header>
+        <header className="bg-transparent h-2 sm:h-8 shrink-0 print:hidden"></header>
         
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 pt-0 print:p-0 print:overflow-visible">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 pt-0 print:p-0 print:overflow-visible pt-[env(safe-area-inset-top)] sm:pt-0">
           <div className="max-w-[1600px] mx-auto">
-            <div className="print:hidden lg:hidden flex items-center justify-between mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <div className="print:hidden lg:hidden flex items-center justify-between mb-6 mt-4 sm:mt-0 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
                <button className="text-slate-500 hover:text-slate-900" onClick={() => setSidebarOpen(true)}>
                  <Menu size={20} />
                </button>

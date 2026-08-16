@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { ReturnEntry, ReturnItem } from '../types';
 import { Plus, Search } from 'lucide-react';
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 
 export const Returns: React.FC = () => {
   const { returns, setReturns, clients, products, setProducts, currentUser, invoices } = useStore();
@@ -15,6 +16,7 @@ export const Returns: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState<'Damaged' | 'Expired' | 'Wrong Item' | 'Other'>('Damaged');
   const [action, setAction] = useState<'Return to Stock' | 'Write Off'>('Write Off');
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   
   const isAdmin = currentUser?.role === 'Admin';
   if (!isAdmin) {
@@ -51,6 +53,7 @@ export const Returns: React.FC = () => {
 
   const handleSave = () => {
     if (!selectedClientId || items.length === 0) return alert('Please select a client and add items.');
+    setPendingAction(() => () => {
     
     const newReturn: ReturnEntry = {
       id: Date.now().toString(),
@@ -86,10 +89,12 @@ export const Returns: React.FC = () => {
     setIsAdding(false);
     setSelectedClientId('');
     setItems([]);
+    });
   };
 
   return (
     <div className="space-y-6">
+      <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-900">Returns & Credit Notes</h1>
         <button 

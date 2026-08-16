@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { FileText, XCircle, Search, Eye, Printer, Download, Share2 } from 'lucide-react';
 import { InvoiceTemplate } from '../components/InvoiceTemplate';
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 import { useReactToPrint } from 'react-to-print';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -13,6 +14,7 @@ export const InvoiceHistory: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const printRef = React.useRef<HTMLDivElement>(null);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Invoice_${selectedInvoice?.id || "Draft"}`, 
@@ -113,6 +115,7 @@ export const InvoiceHistory: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-900">Invoice History</h1>
       </div>

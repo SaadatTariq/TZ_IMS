@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 import { PayrollEntry } from '../types';
 import { Plus, Trash2, CheckCircle } from 'lucide-react';
 
@@ -37,6 +38,7 @@ export const Payroll: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Payroll Management</h1>
         <button 

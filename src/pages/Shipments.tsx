@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 import { Shipment, ShipmentStatus } from '../types';
 import { Plus, Search, Truck, Edit2, Trash2 } from 'lucide-react';
 
 export const Shipments: React.FC = () => {
   const { shipments, setShipments, currentUser } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const isAdmin = currentUser?.role === 'Admin';
   
@@ -64,6 +66,7 @@ export const Shipments: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Shipments & LC Tracker</h1>
         {isAdmin && (

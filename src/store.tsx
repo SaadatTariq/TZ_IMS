@@ -29,11 +29,7 @@ interface StoreContextType extends StoreState {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-const initialProducts: Product[] = [
-  { id: '1', code: 'TZ-1803', barcode: '1234567890123', description: 'Big Sieve', unit: 'Pcs', cpu: 200, tpCsd: 220, tpCaptainsWorld: 230, tpCoopers: 240, tpShumis: 250, tpGenius: 0, tpOverseas: 350, tpIferi: 260, mrp: 500, stock: 150 },
-  { id: '2', code: 'TZ-1804', barcode: '1234567890124', description: 'M Sieve', unit: 'Pcs', cpu: 180, tpCsd: 200, tpCaptainsWorld: 210, tpCoopers: 220, tpShumis: 230, tpGenius: 0, tpOverseas: 330, tpIferi: 240, mrp: 450, stock: 95 },
-  { id: '3', code: 'TZ-1805', barcode: '1234567890125', description: 'S Sieve', unit: 'Pcs', cpu: 150, tpCsd: 170, tpCaptainsWorld: 180, tpCoopers: 190, tpShumis: 200, tpGenius: 0, tpOverseas: 295, tpIferi: 210, mrp: 400, stock: 0 },
-];
+const initialProducts: Product[] = [];
 
 const initialUsers: User[] = [
   { id: '1', name: 'Mohammed Tarique Ismail', username: 'MTI01', role: 'Admin', email: 'admin1@tz.com', password: 'Admin001' },
@@ -86,45 +82,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         let needsUpdate = false;
         const updatePayload: any = {};
         
-        // Migration: Ensure all state collections exist in the remote database
-        if (!data.users || data.users.length === 0) {
-          data.users = initialUsers;
-          updatePayload.users = initialUsers;
-          needsUpdate = true;
-        } else if (!data.users.find((u: User) => u.name === 'Mohammed Tarique Ismail')) {
-          data.users = initialUsers;
-          updatePayload.users = initialUsers;
-          needsUpdate = true;
-        } else {
-          // Add usernames if they don't exist
-          let usersUpdated = false;
-          data.users = data.users.map(u => {
-             if (!u.username) {
-               usersUpdated = true;
-               if (u.name === 'Mohammed Tarique Ismail') return { ...u, username: 'MTI01' };
-               if (u.name === 'Mohammed Saadat Tariq') return { ...u, username: 'MST02' };
-               if (u.name === 'Md Masum' || u.name === 'Masum') return { ...u, username: 'MMEmp01' };
-               return { ...u, username: u.name.replace(/s+/g, '').toLowerCase() }; // Fallback
-             }
-             return u;
-          });
-          if (usersUpdated) {
-            updatePayload.users = data.users;
-            needsUpdate = true;
-          }
-        }
-
-        if (!data.clients || data.clients.length === 0) {
-          data.clients = initialClients;
-          updatePayload.clients = initialClients;
-          needsUpdate = true;
-        }
-
-        if (!data.products) {
-          data.products = initialProducts;
-          updatePayload.products = initialProducts;
-          needsUpdate = true;
-        }
+        // Migrations disabled to prevent overwriting user data
+        if (!data.users) { data.users = []; updatePayload.users = []; needsUpdate = true; }
+        if (!data.clients) { data.clients = []; updatePayload.clients = []; needsUpdate = true; }
+        if (!data.products) { data.products = []; updatePayload.products = []; needsUpdate = true; }
 
         if (!data.invoices) { data.invoices = []; updatePayload.invoices = []; needsUpdate = true; }
         if (!data.returns) { data.returns = []; updatePayload.returns = []; needsUpdate = true; }

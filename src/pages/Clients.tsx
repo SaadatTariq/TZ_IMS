@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 import { Client } from '../types';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 
@@ -51,9 +52,9 @@ export const Clients: React.FC = () => {
   };
 
   const deleteClient = (id: string) => {
-    if (confirm('Are you sure you want to delete this client?')) {
+    setPendingAction(() => () => {
       setClients(clients.filter(c => c.id !== id));
-    }
+    });
   };
 
   if (!isAdmin) {
@@ -62,6 +63,7 @@ export const Clients: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-900">Client Management</h1>
         <button 
