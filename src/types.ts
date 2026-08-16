@@ -11,6 +11,8 @@ export interface User {
   photoUrl?: string;
   idNumber?: string;
   phoneNumber?: string;
+  bloodGroup?: string;
+  address?: string;
 }
 
 export interface Product {
