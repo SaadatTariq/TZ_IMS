@@ -6,6 +6,7 @@ import { Plus, Trash2, CheckCircle } from 'lucide-react';
 
 export const Payroll: React.FC = () => {
   const { users, payroll, setPayroll } = useStore();
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<PayrollEntry>>({
     employeeId: users[0]?.id || '',

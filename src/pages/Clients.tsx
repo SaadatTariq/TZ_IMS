@@ -6,6 +6,7 @@ import { Plus, Edit2, Trash2 } from 'lucide-react';
 
 export const Clients: React.FC = () => {
   const { clients, setClients, currentUser } = useStore();
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const isAdmin = currentUser?.role === 'Admin';
   

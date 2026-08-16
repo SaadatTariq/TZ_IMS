@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 
 export const Ledger: React.FC = () => {
   const { ledger, setLedger, invoices, setInvoices, payroll, returns, clients } = useStore();
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<LedgerEntry>>({
     date: new Date().toISOString().slice(0, 10),

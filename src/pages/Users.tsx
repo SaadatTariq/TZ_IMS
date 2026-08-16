@@ -6,6 +6,7 @@ import { Plus, Trash2, Shield, Edit2 } from 'lucide-react';
 
 export const Users: React.FC = () => {
   const { users, setUsers, currentUser } = useStore();
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
