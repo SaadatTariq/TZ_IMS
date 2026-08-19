@@ -29,6 +29,27 @@ interface StoreContextType extends StoreState {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
+const sanitizeForFirestore = (value: any): any => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => sanitizeForFirestore(item))
+      .filter((item) => item !== undefined);
+  }
+
+  if (value && typeof value === 'object') {
+    const sanitizedEntries = Object.entries(value)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .map(([entryKey, entryValue]) => [entryKey, sanitizeForFirestore(entryValue)]);
+    return Object.fromEntries(sanitizedEntries);
+  }
+
+  if (typeof value === 'number' && Number.isNaN(value)) {
+    return 0;
+  }
+
+  return value;
+};
+
 const initialProducts: Product[] = [];
 
 const initialUsers: User[] = [
@@ -132,7 +153,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       sessionStorage.setItem('erp-currentUser', JSON.stringify(value));
     } else {
       try {
-        await setDoc(doc(db, 'erp_store', 'main'), { [key]: value }, { merge: true });
+        await setDoc(
+          doc(db, 'erp_store', 'main'),
+          { [key]: sanitizeForFirestore(value) },
+          { merge: true }
+        );
       } catch (err: any) {
         console.error("Firebase sync error:", err);
         alert("Database save failed! You may need to update your Firestore Security Rules in the Firebase Console to allow writes. Error: " + err.message);

@@ -80,7 +80,7 @@ export const Inventory: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      code: '', barcode: '', description: '', unit: 'Box', cpu: 0, 
+      code: '', barcode: '', description: '', descriptionCsd: '', unit: 'Box', cpu: 0, 
       tpCsd: 0, tpCaptainsWorld: 0, tpCoopers: 0, tpShumis: 0, tpGenius: 0, tpOverseas: 0, tpIferi: 0,
       mrp: 0, stock: 0
     });
