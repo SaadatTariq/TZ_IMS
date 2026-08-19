@@ -6,9 +6,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { Plus, Search, Edit2, Trash2, Upload, Download } from 'lucide-react';
 import Papa from 'papaparse';
 
-export const Inventory: React.FC = () => {
+export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) => {
   const { products, setProducts, currentUser, invoices } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+    const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -23,7 +24,7 @@ export const Inventory: React.FC = () => {
     code: '', barcode: '', description: '',
     descriptionCsd: '', unit: 'Box', cpu: 0, 
     tpCsd: 0, tpCaptainsWorld: 0, tpCoopers: 0, tpShumis: 0, tpGenius: 0, tpOverseas: 0, tpIferi: 0,
-    mrp: 0, stock: 0
+    mrp: 0, stock: 0, productType: type, cp: 0
   });
 
 
@@ -61,44 +62,99 @@ export const Inventory: React.FC = () => {
     return { topProducts, movement };
   }, [invoices, products]);
 
-  const filteredProducts = products.filter(p => 
-    p.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const isCorrectType = p.productType === type || (!p.productType && type === 'Local');
+    if (!isCorrectType) return false;
+    
+    const s = searchTerm.toLowerCase().replace(/[\s-]/g, '');
+    const code = p.code.toLowerCase().replace(/[\s-]/g, '');
+    const desc = p.description.toLowerCase().replace(/[\s-]/g, '');
+    
+    return code.includes(s) || desc.includes(s) || p.description.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+  
+  const currentTabInventoryValue = products
+    .filter(p => p.productType === type || (!p.productType && type === 'Local'))
+    .reduce((sum, p) => sum + (p.stock * (p.cp || 0)), 0);
+  
+  const handleSelectProduct = (id: string) => {
+    const newSelected = new Set(selectedProductIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedProductIds(newSelected);
+  };
+  
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedProductIds(new Set(filteredProducts.map(p => p.id)));
+    } else {
+      setSelectedProductIds(new Set());
+    }
+  };
+  
+  const confirmDeleteSelected = () => {
+    if (selectedProductIds.size === 0) return;
+    const action = () => {
+      setProducts(products.filter(p => !selectedProductIds.has(p.id)));
+      setSelectedProductIds(new Set());
+    };
+    if (isAdmin) {
+      action();
+    } else {
+      setPendingAction(() => action);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setPendingAction(() => () => {
+    const action = () => {
+      let finalFormData = { ...formData };
+      if (type === 'Local' && !finalFormData.productType) finalFormData.productType = 'Local';
+      
       if (formData.id) {
-        setProducts(products.map(p => p.id === formData.id ? { ...p, ...formData } as Product : p));
+        setProducts(products.map(p => p.id === formData.id ? { ...p, ...finalFormData } as Product : p));
       } else {
         const existingProduct = products.find(p => p.code.toLowerCase() === formData.code?.toLowerCase());
         if (existingProduct) {
-          setProducts(products.map(p => p.id === existingProduct.id ? { ...p, ...formData, id: p.id } as Product : p));
+          setProducts(products.map(p => p.id === existingProduct.id ? { ...p, ...finalFormData, id: p.id } as Product : p));
         } else {
-          const newProduct: Product = { ...formData, id: Date.now().toString() } as Product;
+          const newProduct: Product = { ...finalFormData, id: Date.now().toString() } as Product;
           setProducts([...products, newProduct]);
         }
       }
       setIsAdding(false);
       resetForm();
-    });
+    };
+    
+    if (isAdmin) {
+      action();
+    } else {
+      setPendingAction(() => action);
+    }
   };
 
   const resetForm = () => {
     setFormData({
       code: '', barcode: '', description: '', unit: 'Box', cpu: 0, 
       tpCsd: 0, tpCaptainsWorld: 0, tpCoopers: 0, tpShumis: 0, tpGenius: 0, tpOverseas: 0, tpIferi: 0,
-      mrp: 0, stock: 0
+      mrp: 0, stock: 0, productType: type, cp: 0
     });
   };
 
   const confirmDeleteProduct = () => {
     if (productToDelete) {
-      setPendingAction(() => () => {
+      const action = () => {
         setProducts(products.filter(p => p.id !== productToDelete));
         setProductToDelete(null);
-      });
+      };
+      if (isAdmin) {
+        action();
+      } else {
+        setPendingAction(() => action);
+      }
     }
   };
 
@@ -115,7 +171,7 @@ export const Inventory: React.FC = () => {
 
   const downloadSample = () => {
     const csv = Papa.unparse([
-      { Code: 'TZ-1001', Barcode: '1234567', Description: 'Sample Item', Description_CSD: 'Sample Item CSD', Unit: 'Pcs', CPU: 100, TP_CSD: 110, TP_Captains: 115, TP_Coopers: 120, TP_Shumis: 125, TP_Genius: 130, TP_Overseas: 135, TP_Iferi: 140, MRP: 200, Stock: 50 }
+      { Code: 'TZ-1001', Barcode: '1234567', Description: 'Sample Item', Description_CSD: 'Sample Item CSD', Unit: 'Pcs', CP: 95, CPU: 110, TP_CSD: 110, TP_Captains: 115, TP_Coopers: 120, TP_Shumis: 125, TP_Genius: 130, TP_Overseas: 135, TP_Iferi: 140, MRP: 200, Stock: 50 }
     ]);
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -145,6 +201,7 @@ export const Inventory: React.FC = () => {
             description: row.Description || 'Unknown',
             descriptionCsd: row.Description_CSD || '',
             unit: row.Unit || 'Box',
+            cp: parseFloat(row.CP) || parseFloat(row.CPU) || 0,
             cpu: parseFloat(row.CPU) || 0,
             tpCsd: parseFloat(row.TP_CSD) || 0,
             tpCaptainsWorld: parseFloat(row.TP_Captains) || 0,
@@ -155,6 +212,7 @@ export const Inventory: React.FC = () => {
             tpIferi: parseFloat(row.TP_Iferi) || 0,
             mrp: parseFloat(row.MRP) || 0,
             stock: parseInt(row.Stock) || 0,
+            productType: type,
           };
 
           if (existingIndex >= 0) {
@@ -177,7 +235,7 @@ export const Inventory: React.FC = () => {
     <div className="space-y-6">
       <PasswordConfirmModal isOpen={!!pendingAction} onConfirm={() => { pendingAction?.(); setPendingAction(null); }} onCancel={() => setPendingAction(null)} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Inventory Management</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{type} Inventory Management</h1>
         <div className="flex flex-wrap items-center gap-2">
           {isAdmin && (
             <>
@@ -259,13 +317,18 @@ export const Inventory: React.FC = () => {
               <input required type="text" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">CPU</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">CP (Cost Price)</label>
+              <input required type="number" step="0.01" value={formData.cp || 0} onChange={e => setFormData({...formData, cp: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">CPU / TP(CSD)</label>
               <input required type="number" step="0.01" value={formData.cpu} onChange={e => setFormData({...formData, cpu: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">MRP</label>
               <input required type="number" step="0.01" value={formData.mrp} onChange={e => setFormData({...formData, mrp: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
             </div>
+            
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Stock</label>
               <input required type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: parseInt(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
@@ -341,8 +404,15 @@ export const Inventory: React.FC = () => {
         </div>
       </div>
 
+      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex justify-between items-center">
+        <div>
+          <p className="text-sm text-blue-600 font-semibold uppercase tracking-wider">Total Value of Inventory (Cost Price)</p>
+          <p className="text-2xl font-bold text-slate-900">৳{currentTabInventoryValue.toLocaleString()}</p>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center bg-slate-50">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input 
@@ -353,15 +423,33 @@ export const Inventory: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#36609b]"
             />
           </div>
+          {isAdmin && selectedProductIds.size > 0 && (
+            <button 
+              onClick={confirmDeleteSelected}
+              className="flex items-center px-4 py-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-colors"
+            >
+              <Trash2 size={18} className="mr-2" />
+              Delete Selected ({selectedProductIds.size})
+            </button>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-slate-50 text-slate-600 text-xs tracking-wider uppercase">
+                {isAdmin && <th className="p-4 align-middle border-b w-10">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-slate-300 text-[#36609b] focus:ring-[#36609b]"
+                    checked={filteredProducts.length > 0 && selectedProductIds.size === filteredProducts.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>}
                 <th className="p-4 align-middle border-b">Code</th>
                 <th className="p-4 align-middle border-b">Barcode (CSD)</th>
                 <th className="p-4 align-middle border-b">Description</th>
                 <th className="p-4 align-middle border-b">Desc (CSD)</th>
+                {isAdmin && <th className="p-4 align-middle border-b text-right">CP</th>}
                 {isAdmin && <th className="p-4 align-middle border-b text-right">CPU</th>}
                 <th className="p-4 align-middle border-b text-right text-slate-400">TP (CSD)</th>
                 <th className="p-4 align-middle border-b text-right text-slate-400">TP (Captain)</th>
@@ -378,10 +466,19 @@ export const Inventory: React.FC = () => {
             <tbody className="text-sm">
               {filteredProducts.map(p => (
                 <tr key={p.id} className="border-b hover:bg-slate-50 transition-colors">
+                  {isAdmin && <td className="p-4 align-middle">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-[#36609b] focus:ring-[#36609b]"
+                      checked={selectedProductIds.has(p.id)}
+                      onChange={() => handleSelectProduct(p.id)}
+                    />
+                  </td>}
                   <td className="p-4 align-middle font-medium">{p.code}</td>
                   <td className="p-4 align-middle text-slate-500">{p.barcode || '-'}</td>
                   <td className="p-4 align-middle">{p.description}</td>
                   <td className="p-4 align-middle text-slate-500">{p.descriptionCsd || "-"}</td>
+                  {isAdmin && <td className="p-4 align-middle text-right">৳{p.cp || 0}</td>}
                   {isAdmin && <td className="p-4 align-middle text-right">৳{p.cpu}</td>}
                   <td className="p-4 align-middle text-right text-slate-500">৳{p.tpCsd}</td>
                   <td className="p-4 align-middle text-right text-slate-500">৳{p.tpCaptainsWorld}</td>

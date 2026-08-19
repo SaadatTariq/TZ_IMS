@@ -37,7 +37,8 @@ function AppContent() {
   const renderPage = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
-      case 'inventory': return <Inventory />;
+      case 'inventory-local': return <Inventory type="Local" />;
+      case 'inventory-imported': return <Inventory type="Imported" />;
       case 'billing': return <Billing />;
       case 'invoice-history': return <InvoiceHistory />;
       case 'shipments': return <Shipments />;

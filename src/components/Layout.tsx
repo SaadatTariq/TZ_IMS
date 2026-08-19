@@ -18,7 +18,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
     { id: 'invoice-history', label: 'Invoice History', icon: History },
     { id: 'delivery-tracker', label: 'Delivery Tracker', icon: MapPin },
     { id: 'returns', label: 'Returns & Credits', icon: RotateCcw },
-    { id: 'inventory', label: 'Inventory', icon: Package },
+    { id: 'inventory-local', label: 'Local Inventory', icon: Package },
+    { id: 'inventory-imported', label: 'Imported Inventory', icon: Package },
     { id: 'ledger', label: 'Ledger', icon: BookOpen },
     { id: 'shipments', label: 'Shipments', icon: Truck },
     { id: 'payroll', label: 'Payroll', icon: Wallet },
@@ -29,7 +30,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
   const navItems = allNavItems.filter(item => {
     if (currentUser?.role === 'Admin') return true;
     if (!currentUser?.accessibleFeatures) {
-      return ['dashboard', 'billing', 'invoice-history', 'inventory', 'ledger'].includes(item.id);
+      return ['dashboard', 'billing', 'invoice-history', 'inventory-local', 'inventory-imported', 'ledger'].includes(item.id);
     }
     return currentUser.accessibleFeatures.includes(item.id);
   });

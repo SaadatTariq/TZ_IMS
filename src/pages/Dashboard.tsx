@@ -16,10 +16,13 @@ export const Dashboard: React.FC = () => {
     .filter(i => i.status === 'Paid' || i.status === 'Approved')
     .reduce((sum, inv) => sum + inv.total, 0);
 
+  const totalInventoryValue = products.reduce((sum, p) => sum + (p.stock * p.cpu), 0);
+
   const pendingInvoices = invoices.filter(i => i.status === 'Pending Approval');
 
   const stats = [
     { title: 'Total Revenue', value: `৳ ${totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-[#36609b]', bg: 'bg-blue-100' },
+    { title: 'Total Value of Inventory', value: `৳ ${totalInventoryValue.toLocaleString()}`, icon: Wallet, color: 'text-green-600', bg: 'bg-green-100' },
     { title: 'Total Products', value: totalProducts, icon: Package, color: 'text-slate-800', bg: 'bg-gray-100' },
     { title: 'Low Stock (< 100)', value: lowStock, icon: Receipt, color: 'text-orange-600', bg: 'bg-orange-100' },
     { title: 'Out of Stock', value: outOfStock, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100' },

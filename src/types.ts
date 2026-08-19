@@ -32,6 +32,8 @@ export interface Product {
   tpIferi: number;
   mrp: number; 
   stock: number;
+  cp: number;
+  productType?: 'Local' | 'Imported';
 }
 
 export type ClientName = 'CSD' | 'Captains World' | 'Coopers' | 'GENIUS' | 'Overseas' | 'Iferi' | 'Shumis';
