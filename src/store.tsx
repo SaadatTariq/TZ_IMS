@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Product, Invoice, PayrollEntry, LedgerEntry, Client, Shipment, ReturnEntry } from './types';
 import { db } from './lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 interface StoreState {
   users: User[];
@@ -100,28 +100,46 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       clearTimeout(fallbackTimer);
       if (docSnap.exists()) {
         const data = docSnap.data() as Partial<StoreState>;
-        let needsUpdate = false;
-        const updatePayload: any = {};
-        
-        // Migrations disabled to prevent overwriting user data
-        if (!data.users) { data.users = []; updatePayload.users = []; needsUpdate = true; }
-        if (!data.clients) { data.clients = []; updatePayload.clients = []; needsUpdate = true; }
-        if (!data.products) { data.products = []; updatePayload.products = []; needsUpdate = true; }
+        const repairPayload: Partial<StoreState> = {};
 
-        if (!data.invoices) { data.invoices = []; updatePayload.invoices = []; needsUpdate = true; }
-        if (!data.returns) { data.returns = []; updatePayload.returns = []; needsUpdate = true; }
-        if (!data.payroll) { data.payroll = []; updatePayload.payroll = []; needsUpdate = true; }
-        if (!data.ledger) { data.ledger = []; updatePayload.ledger = []; needsUpdate = true; }
-        if (!data.shipments) { data.shipments = []; updatePayload.shipments = []; needsUpdate = true; }
+        const safeData: Partial<StoreState> = {
+          users: Array.isArray(data.users) ? data.users : initialUsers,
+          clients: Array.isArray(data.clients) ? data.clients : initialClients,
+          products: Array.isArray(data.products) ? data.products : [],
+          invoices: Array.isArray(data.invoices) ? data.invoices : [],
+          returns: Array.isArray(data.returns) ? data.returns : [],
+          payroll: Array.isArray(data.payroll) ? data.payroll : [],
+          ledger: Array.isArray(data.ledger) ? data.ledger : [],
+          shipments: Array.isArray(data.shipments) ? data.shipments : [],
+        };
 
-        if (needsUpdate) {
-          setDoc(doc(db, 'erp_store', 'main'), updatePayload, { merge: true }).catch(console.error);
+        // Recovery: reseed critical collections if they were accidentally wiped to empty arrays.
+        if (Array.isArray(data.users) && data.users.length === 0) {
+          safeData.users = initialUsers;
+          repairPayload.users = initialUsers;
+        }
+        if (Array.isArray(data.clients) && data.clients.length === 0) {
+          safeData.clients = initialClients;
+          repairPayload.clients = initialClients;
+        }
+
+        if (!Array.isArray(data.users)) repairPayload.users = initialUsers;
+        if (!Array.isArray(data.clients)) repairPayload.clients = initialClients;
+        if (!Array.isArray(data.products)) repairPayload.products = [];
+        if (!Array.isArray(data.invoices)) repairPayload.invoices = [];
+        if (!Array.isArray(data.returns)) repairPayload.returns = [];
+        if (!Array.isArray(data.payroll)) repairPayload.payroll = [];
+        if (!Array.isArray(data.ledger)) repairPayload.ledger = [];
+        if (!Array.isArray(data.shipments)) repairPayload.shipments = [];
+
+        if (Object.keys(repairPayload).length > 0) {
+          setDoc(doc(db, 'erp_store', 'main'), sanitizeForFirestore(repairPayload), { merge: true }).catch(console.error);
         }
 
         // Ensure currentUser is never overwritten by remote database
-        delete (data as any).currentUser;
+        delete (safeData as any).currentUser;
 
-        setState(prev => ({ ...prev, ...data }));
+        setState(prev => ({ ...prev, ...safeData }));
       } else {
         const { currentUser, ...stateToSave } = initialState;
         console.log("Document does not exist. Creating it now...");

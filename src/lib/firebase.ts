@@ -28,7 +28,7 @@ if (import.meta.env.PROD) {
   }
 }
 
-const db = getFirestore(app, "ai-studio-tzdistributioner-215c7673-7841-4460-be6c-6378252ba9af");
+const db = getFirestore(app);
 
 const auth = getAuth(app);
 
