@@ -473,6 +473,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
                 <th className="p-4 align-middle border-b">Barcode (CSD)</th>
                 <th className="p-4 align-middle border-b">Description</th>
                 <th className="p-4 align-middle border-b">Desc (CSD)</th>
+                <th className="p-4 align-middle border-b">Unit</th>
                 {isAdmin && <th className="p-4 align-middle border-b text-right">CP</th>}
                 {isAdmin && <th className="p-4 align-middle border-b text-right">CPU</th>}
                                 <th className="p-4 align-middle border-b text-right text-slate-400">TP (Captain)</th>
@@ -501,6 +502,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
                   <td className="p-4 align-middle text-slate-500">{p.barcode || '-'}</td>
                   <td className="p-4 align-middle">{p.description}</td>
                   <td className="p-4 align-middle text-slate-500">{p.descriptionCsd || "-"}</td>
+                  <td className="p-4 align-middle text-slate-500">{p.unit}</td>
                   {isAdmin && <td className="p-4 align-middle text-right">৳{p.cp || 0}</td>}
                   {isAdmin && <td className="p-4 align-middle text-right">৳{p.cpu}</td>}
                                     <td className="p-4 align-middle text-right text-slate-500">৳{p.tpCaptainsWorld}</td>
