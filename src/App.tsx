@@ -18,6 +18,7 @@ import { Clients } from './pages/Clients';
 import { Returns } from './pages/Returns';
 import { DeliveryTracker } from './pages/DeliveryTracker';
 import { Login } from './pages/Login';
+import { SystemMonitor } from './pages/SystemMonitor';
 
 function AppContent() {
   const { currentUser } = useStore();
@@ -48,6 +49,7 @@ function AppContent() {
       case 'clients': return <Clients />;
       case 'returns': return <Returns />;
       case 'delivery-tracker': return <DeliveryTracker />;
+      case 'system-monitor': return <SystemMonitor />;
       default: return <Dashboard />;
     }
   };

@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import Papa from 'papaparse';
 
 export const Dashboard: React.FC = () => {
-  const { products, invoices, setInvoices, setProducts, currentUser, ledger, shipments, returns } = useStore();
+  const { products, invoices, setInvoices, setProducts, currentUser, ledger, shipments, returns, addAuditLog } = useStore();
 
   const isAdmin = currentUser?.role === 'Admin';
   const totalProducts = products.length;
@@ -100,6 +100,13 @@ export const Dashboard: React.FC = () => {
   const greetingName = nameParts.length > 2 ? nameParts[1] : (nameParts.length === 2 ? nameParts[1] : nameParts[0]);
 
   const exportAllData = () => {
+    addAuditLog({
+      userName: currentUser?.name || 'System',
+      userRole: currentUser?.role || 'Unknown',
+      action: 'EXPORT',
+      module: 'System',
+      description: 'Exported all database collections to CSV.'
+    });
     const downloadFile = (content: string, filename: string) => {
       const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);

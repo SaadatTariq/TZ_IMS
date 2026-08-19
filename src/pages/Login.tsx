@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 
 export const Login: React.FC = () => {
-  const { users, setCurrentUser } = useStore();
+  const { users, setCurrentUser, addAuditLog } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -15,6 +15,13 @@ export const Login: React.FC = () => {
     );
     if (user) {
       setCurrentUser(user);
+      addAuditLog({
+        userName: user.name,
+        userRole: user.role,
+        action: 'LOGIN',
+        module: 'Auth',
+        description: `User logged in successfully.`
+      });
       setError('');
     } else {
       setError('Invalid username or password.');

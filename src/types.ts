@@ -120,3 +120,13 @@ export interface ReturnEntry {
   status: 'Processed';
   notes?: string;
 }
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  userName: string;
+  userRole: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'SYSTEM' | 'EXPORT';
+  module: 'Auth' | 'Inventory' | 'Billing' | 'System' | 'Ledger' | 'Shipments' | 'Users' | 'Clients' | 'Returns';
+  description: string;
+}

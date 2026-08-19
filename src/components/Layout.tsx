@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { LayoutDashboard, Receipt, Package, Users, Wallet, BookOpen, Truck, Menu, X, LogOut, History, MapPin, RotateCcw, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Receipt, Package, Users, Wallet, BookOpen, Truck, Menu, X, LogOut, History, MapPin, RotateCcw, RefreshCw, Activity } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,6 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
     { id: 'payroll', label: 'Payroll', icon: Wallet },
     { id: 'clients', label: 'Clients', icon: Users },
     { id: 'users', label: 'Users', icon: Users },
+    { id: 'system-monitor', label: 'System Monitor', icon: Activity },
   ];
 
   const navItems = allNavItems.filter(item => {

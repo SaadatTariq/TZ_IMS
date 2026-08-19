@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Product, Invoice, PayrollEntry, LedgerEntry, Client, Shipment, ReturnEntry } from './types';
+import { User, Product, Invoice, PayrollEntry, LedgerEntry, Client, Shipment, ReturnEntry, AuditLog } from './types';
 import { db } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
@@ -13,6 +13,7 @@ interface StoreState {
   shipments: Shipment[];
   clients: Client[];
   currentUser: User | null;
+  auditLogs: AuditLog[];
 }
 
 interface StoreContextType extends StoreState {
@@ -25,6 +26,8 @@ interface StoreContextType extends StoreState {
   setShipments: (shipments: Shipment[]) => void;
   setClients: (clients: Client[]) => void;
   setCurrentUser: (user: User | null) => void;
+  addAuditLog: (log: Omit<AuditLog, 'id' | 'timestamp'>) => void;
+  dbStatus: 'Online' | 'Offline' | 'Connecting';
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -57,6 +60,7 @@ const initialState: StoreState = {
   shipments: [],
   clients: initialClients,
   currentUser: null, // Default to null to show login
+  auditLogs: [],
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -68,6 +72,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   });
   const [isLoaded, setIsLoaded] = useState(false);
+  const [dbStatus, setDbStatus] = useState<'Online' | 'Offline' | 'Connecting'>('Connecting');
+  
+  useEffect(() => {
+    const handleOnline = () => setDbStatus('Online');
+    const handleOffline = () => setDbStatus('Offline');
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setDbStatus(navigator.onLine ? 'Online' : 'Offline');
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     // Fallback timer: if Firebase takes too long to connect/respond, just use local state
@@ -92,6 +109,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!data.payroll) { data.payroll = []; updatePayload.payroll = []; needsUpdate = true; }
         if (!data.ledger) { data.ledger = []; updatePayload.ledger = []; needsUpdate = true; }
         if (!data.shipments) { data.shipments = []; updatePayload.shipments = []; needsUpdate = true; }
+        if (!data.auditLogs) { data.auditLogs = []; updatePayload.auditLogs = []; needsUpdate = true; }
 
         if (needsUpdate) {
           setDoc(doc(db, 'erp_store', 'main'), updatePayload, { merge: true }).catch(console.error);
@@ -124,6 +142,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       unsubscribe();
     };
   }, []);
+
+  const addAuditLog = (logData: Omit<AuditLog, 'id' | 'timestamp'>) => {
+    const newLog: AuditLog = {
+      ...logData,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      timestamp: new Date().toISOString()
+    };
+    setState(prev => {
+      const updatedLogs = [newLog, ...(prev.auditLogs || [])].slice(0, 1000); // Keep last 1000
+      
+      // Async save to firestore without blocking state
+      const cleanValue = JSON.parse(JSON.stringify(updatedLogs));
+      setDoc(doc(db, 'erp_store', 'main'), { auditLogs: cleanValue }, { merge: true }).catch(console.error);
+      
+      return { ...prev, auditLogs: updatedLogs };
+    });
+  };
 
   const updateState = async (key: keyof StoreState, value: any) => {
     setState(prev => ({ ...prev, [key]: value }));
@@ -164,6 +199,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setClients: (clients) => updateState('clients', clients),
         setReturns: (returns) => updateState('returns', returns),
         setCurrentUser: (user) => updateState('currentUser', user),
+        addAuditLog,
+        dbStatus,
       }}
     >
       {children}

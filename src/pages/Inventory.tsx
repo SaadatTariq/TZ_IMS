@@ -7,7 +7,7 @@ import { Plus, Search, Edit2, Trash2, Upload, Download } from 'lucide-react';
 import Papa from 'papaparse';
 
 export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) => {
-  const { products, setProducts, currentUser, invoices } = useStore();
+  const { products, setProducts, currentUser, invoices, addAuditLog } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
     const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
@@ -117,6 +117,13 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
       
       if (formData.id) {
         setProducts(products.map(p => p.id === formData.id ? { ...p, ...finalFormData } as Product : p));
+        addAuditLog({
+          userName: currentUser?.name || 'Unknown',
+          userRole: currentUser?.role || 'Unknown',
+          action: 'UPDATE',
+          module: 'Inventory',
+          description: `Updated product ${finalFormData.code} (${finalFormData.description}).`
+        });
       } else {
         const existingProduct = products.find(p => p.code.toLowerCase() === formData.code?.toLowerCase());
         if (existingProduct) {
@@ -124,6 +131,13 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
         } else {
           const newProduct: Product = { ...finalFormData, id: Date.now().toString() } as Product;
           setProducts([...products, newProduct]);
+          addAuditLog({
+            userName: currentUser?.name || 'Unknown',
+            userRole: currentUser?.role || 'Unknown',
+            action: 'CREATE',
+            module: 'Inventory',
+            description: `Added new product ${newProduct.code} (${newProduct.description}).`
+          });
         }
       }
       setIsAdding(false);
@@ -148,7 +162,17 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
   const confirmDeleteProduct = () => {
     if (productToDelete) {
       const action = () => {
+        const p = products.find(p => p.id === productToDelete);
         setProducts(products.filter(p => p.id !== productToDelete));
+        if (p) {
+          addAuditLog({
+            userName: currentUser?.name || 'Unknown',
+            userRole: currentUser?.role || 'Unknown',
+            action: 'DELETE',
+            module: 'Inventory',
+            description: `Deleted product ${p.code} (${p.description}).`
+          });
+        }
         setProductToDelete(null);
       };
       if (isAdmin) {
@@ -172,7 +196,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
 
   const downloadSample = () => {
     const csv = Papa.unparse([
-      { Code: 'TZ-1001', Barcode: '1234567', Description: 'Sample Item', Description_CSD: 'Sample Item CSD', Unit: 'Pcs', CP: 95, CPU: 110, TP_CSD: 110, TP_Captains: 115, TP_Coopers: 120, TP_Shumis: 125, TP_Genius: 130, TP_Overseas: 135, TP_Iferi: 140, MRP: 200, Stock: 50 }
+      { Code: 'TZ-1001', Barcode: '1234567', Description: 'Sample Item', Description_CSD: 'Sample Item CSD', Unit: 'Pcs', CP: 95, CPU: 110, TP_Captains: 115, TP_Coopers: 120, TP_Shumis: 125, TP_Genius: 130, TP_Overseas: 135, TP_Iferi: 140, MRP: 200, Stock: 50 }
     ]);
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -204,7 +228,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
             unit: row.Unit || 'Box',
             cp: parseFloat(row.CP) || parseFloat(row.CPU) || 0,
             cpu: parseFloat(row.CPU) || 0,
-            tpCsd: parseFloat(row.TP_CSD) || 0,
+            tpCsd: parseFloat(row.CPU) || 0,
             tpCaptainsWorld: parseFloat(row.TP_Captains) || 0,
             tpCoopers: parseFloat(row.TP_Coopers) || 0,
             tpShumis: parseFloat(row.TP_Shumis) || 0,
