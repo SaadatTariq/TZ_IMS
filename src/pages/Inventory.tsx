@@ -68,19 +68,21 @@ export const Inventory: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.id) {
-      setProducts(products.map(p => p.id === formData.id ? { ...p, ...formData } as Product : p));
-    } else {
-      const newProduct: Product = { ...formData, id: Date.now().toString() } as Product;
-      setProducts([...products, newProduct]);
-    }
-    setIsAdding(false);
-    resetForm();
+    setPendingAction(() => () => {
+      if (formData.id) {
+        setProducts(products.map(p => p.id === formData.id ? { ...p, ...formData } as Product : p));
+      } else {
+        const newProduct: Product = { ...formData, id: Date.now().toString() } as Product;
+        setProducts([...products, newProduct]);
+      }
+      setIsAdding(false);
+      resetForm();
+    });
   };
 
   const resetForm = () => {
     setFormData({
-      code: '', barcode: '', description: '', descriptionCsd: '', unit: 'Box', cpu: 0, 
+      code: '', barcode: '', description: '', unit: 'Box', cpu: 0, 
       tpCsd: 0, tpCaptainsWorld: 0, tpCoopers: 0, tpShumis: 0, tpGenius: 0, tpOverseas: 0, tpIferi: 0,
       mrp: 0, stock: 0
     });
@@ -88,8 +90,10 @@ export const Inventory: React.FC = () => {
 
   const confirmDeleteProduct = () => {
     if (productToDelete) {
-      setProducts(products.filter(p => p.id !== productToDelete));
-      setProductToDelete(null);
+      setPendingAction(() => () => {
+        setProducts(products.filter(p => p.id !== productToDelete));
+        setProductToDelete(null);
+      });
     }
   };
 

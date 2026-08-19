@@ -14,7 +14,7 @@ export const Users: React.FC = () => {
   const defaultFeatures = ['dashboard', 'billing', 'inventory'];
   
   const [formData, setFormData] = useState<Partial<User>>({
-    name: '', username: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: ''
+    name: '', username: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: '', bloodGroup: '', address: ''
   });
 
   if (currentUser?.role !== 'Admin') {
@@ -44,7 +44,7 @@ export const Users: React.FC = () => {
   };
 
   const openAddForm = () => {
-    setFormData({ name: '', username: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: '' });
+    setFormData({ name: '', username: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: '', bloodGroup: '', address: '' });
     setEditingUserId(null);
     setIsFormOpen(true);
   };
@@ -68,7 +68,7 @@ export const Users: React.FC = () => {
       setUsers([...users, newUser]);
     }
     setIsFormOpen(false);
-    setFormData({ name: '', username: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: '' });
+    setFormData({ name: '', username: '', email: '', role: 'Employee', password: '', accessibleFeatures: defaultFeatures, photoUrl: '', idNumber: '', phoneNumber: '', bloodGroup: '', address: '' });
     });
   };
 
@@ -126,6 +126,14 @@ export const Users: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">ID Number</label>
                 <input type="text" value={formData.idNumber || ''} onChange={e => setFormData({...formData, idNumber: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Blood Group</label>
+                <input type="text" placeholder="e.g. O+" value={formData.bloodGroup || ''} onChange={e => setFormData({...formData, bloodGroup: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                <input type="text" placeholder="Full address" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
               </div>
               <div className="sm:col-span-2 lg:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Photo URL</label>
@@ -204,9 +212,14 @@ export const Users: React.FC = () => {
                       </div>
                     </div>
                   </td>
+                  <td className="p-4 align-middle text-slate-600 text-sm font-medium">
+                    {u.username || '-'}
+                  </td>
                   <td className="p-4 align-middle text-slate-600 text-sm">
                     <div>{u.email}</div>
                     {u.phoneNumber && <div>{u.phoneNumber}</div>}
+                    {u.bloodGroup && <div className="text-xs text-red-500 mt-0.5 font-medium">Blood: {u.bloodGroup}</div>}
+                    {u.address && <div className="text-xs text-slate-500 mt-0.5 max-w-[200px] truncate" title={u.address}>{u.address}</div>}
                   </td>
                   <td className="p-4 align-middle">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${u.role === 'Admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-slate-700'}`}>
