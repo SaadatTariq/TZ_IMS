@@ -1,4 +1,5 @@
-import { initializeApp } from "firebase/app";
+const fs = require('fs');
+let code = `import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
@@ -38,3 +39,6 @@ const db = getFirestore(app, dbId);
 
 const auth = getAuth(app);
 export { app, analytics, db, auth };
+`;
+
+fs.writeFileSync('src/lib/firebase.ts', code);

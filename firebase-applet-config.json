@@ -1,12 +1,12 @@
 {
-  "projectId": "tz-ims-production",
-  "appId": "1:455130357173:web:d53d58132c14372a698dfc",
-  "apiKey": "AIzaSyCjoMO3oZXMUNAGADCa6nln_t2sqxzBqag",
-  "authDomain": "tz-ims-production.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
-  "storageBucket": "tz-ims-production.firebasestorage.app",
-  "messagingSenderId": "455130357173",
-  "measurementId": "G-HXMNJMYDXC",
-  "oAuthClientId": "",
+  "projectId": "gen-lang-client-0026243833",
+  "appId": "1:274762624954:web:0fb4811ccc810ae756f783",
+  "apiKey": "AIzaSyAfU-eT0vDUdhY6KFMU9HSx5w8jqX2uSIs",
+  "authDomain": "gen-lang-client-0026243833.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-tzdistributioner-215c7673-7841-4460-be6c-6378252ba9af",
+  "storageBucket": "gen-lang-client-0026243833.firebasestorage.app",
+  "messagingSenderId": "274762624954",
+  "measurementId": "",
+  "oAuthClientId": "274762624954-l819rgkbua4phkdh7osr555b79umtrqn.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }
