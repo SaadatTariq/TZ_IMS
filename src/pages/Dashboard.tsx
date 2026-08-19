@@ -16,7 +16,7 @@ export const Dashboard: React.FC = () => {
     .filter(i => i.status === 'Paid' || i.status === 'Approved')
     .reduce((sum, inv) => sum + inv.total, 0);
 
-  const totalInventoryValue = products.reduce((sum, p) => sum + (p.stock * p.cpu), 0);
+  const totalInventoryValue = products.reduce((sum, p) => sum + (p.stock * (p.cp || 0)), 0);
 
   const pendingInvoices = invoices.filter(i => i.status === 'Pending Approval');
 

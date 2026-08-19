@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { LayoutDashboard, Receipt, Package, Users, Wallet, BookOpen, Truck, Menu, X, LogOut, History, MapPin, RotateCcw } from 'lucide-react';
+import { LayoutDashboard, Receipt, Package, Users, Wallet, BookOpen, Truck, Menu, X, LogOut, History, MapPin, RotateCcw, RefreshCw } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -84,6 +84,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                <p className="text-sm font-medium text-white truncate">{currentUser?.name}</p>
                <p className="text-xs text-slate-400 truncate">{currentUser?.role}</p>
              </div>
+             <button onClick={() => window.location.reload()} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors shrink-0" title="Refresh App">
+               <RefreshCw size={16} />
+             </button>
              <button onClick={() => setCurrentUser(null)} className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors shrink-0" title="Sign Out">
                <LogOut size={16} />
              </button>
@@ -103,7 +106,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                <h1 className="text-lg font-semibold text-slate-800 capitalize">
                  {activeTab.replace('-', ' ')}
                </h1>
-               <div className="w-5"></div>
+               <button className="text-slate-500 hover:text-slate-900" onClick={() => window.location.reload()} title="Refresh App">
+                 <RefreshCw size={20} />
+               </button>
             </div>
             {children}
           </div>

@@ -112,6 +112,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
     e.preventDefault();
     const action = () => {
       let finalFormData = { ...formData };
+      finalFormData.tpCsd = finalFormData.cpu;
       if (type === 'Local' && !finalFormData.productType) finalFormData.productType = 'Local';
       
       if (formData.id) {
@@ -334,8 +335,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
               <input required type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: parseInt(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" />
             </div>
             
-            <div><label className="block text-xs font-medium text-slate-700 mb-1">TP (CSD)</label><input required type="number" step="0.01" value={formData.tpCsd} onChange={e => setFormData({...formData, tpCsd: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" /></div>
-            <div><label className="block text-xs font-medium text-slate-700 mb-1">TP (Captains World)</label><input required type="number" step="0.01" value={formData.tpCaptainsWorld} onChange={e => setFormData({...formData, tpCaptainsWorld: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" /></div>
+                        <div><label className="block text-xs font-medium text-slate-700 mb-1">TP (Captains World)</label><input required type="number" step="0.01" value={formData.tpCaptainsWorld} onChange={e => setFormData({...formData, tpCaptainsWorld: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" /></div>
             <div><label className="block text-xs font-medium text-slate-700 mb-1">TP (Coopers)</label><input required type="number" step="0.01" value={formData.tpCoopers} onChange={e => setFormData({...formData, tpCoopers: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" /></div>
             <div><label className="block text-xs font-medium text-slate-700 mb-1">TP (Shumis)</label><input required type="number" step="0.01" value={formData.tpShumis} onChange={e => setFormData({...formData, tpShumis: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" /></div>
             <div><label className="block text-xs font-medium text-slate-700 mb-1">TP (Genius)</label><input required type="number" step="0.01" value={formData.tpGenius} onChange={e => setFormData({...formData, tpGenius: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none" /></div>
@@ -451,8 +451,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
                 <th className="p-4 align-middle border-b">Desc (CSD)</th>
                 {isAdmin && <th className="p-4 align-middle border-b text-right">CP</th>}
                 {isAdmin && <th className="p-4 align-middle border-b text-right">CPU</th>}
-                <th className="p-4 align-middle border-b text-right text-slate-400">TP (CSD)</th>
-                <th className="p-4 align-middle border-b text-right text-slate-400">TP (Captain)</th>
+                                <th className="p-4 align-middle border-b text-right text-slate-400">TP (Captain)</th>
                 <th className="p-4 align-middle border-b text-right text-slate-400">TP (Cooper)</th>
                 <th className="p-4 align-middle border-b text-right text-slate-400">TP (Shumi)</th>
                 <th className="p-4 align-middle border-b text-right text-slate-400">TP (Genius)</th>
@@ -480,8 +479,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
                   <td className="p-4 align-middle text-slate-500">{p.descriptionCsd || "-"}</td>
                   {isAdmin && <td className="p-4 align-middle text-right">৳{p.cp || 0}</td>}
                   {isAdmin && <td className="p-4 align-middle text-right">৳{p.cpu}</td>}
-                  <td className="p-4 align-middle text-right text-slate-500">৳{p.tpCsd}</td>
-                  <td className="p-4 align-middle text-right text-slate-500">৳{p.tpCaptainsWorld}</td>
+                                    <td className="p-4 align-middle text-right text-slate-500">৳{p.tpCaptainsWorld}</td>
                   <td className="p-4 align-middle text-right text-slate-500">৳{p.tpCoopers}</td>
                   <td className="p-4 align-middle text-right text-slate-500">৳{p.tpShumis}</td>
                   <td className="p-4 align-middle text-right text-slate-500">৳{p.tpGenius}</td>
