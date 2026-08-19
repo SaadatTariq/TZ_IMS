@@ -72,8 +72,13 @@ export const Inventory: React.FC = () => {
       if (formData.id) {
         setProducts(products.map(p => p.id === formData.id ? { ...p, ...formData } as Product : p));
       } else {
-        const newProduct: Product = { ...formData, id: Date.now().toString() } as Product;
-        setProducts([...products, newProduct]);
+        const existingProduct = products.find(p => p.code.toLowerCase() === formData.code?.toLowerCase());
+        if (existingProduct) {
+          setProducts(products.map(p => p.id === existingProduct.id ? { ...p, ...formData, id: p.id } as Product : p));
+        } else {
+          const newProduct: Product = { ...formData, id: Date.now().toString() } as Product;
+          setProducts([...products, newProduct]);
+        }
       }
       setIsAdding(false);
       resetForm();
@@ -128,26 +133,41 @@ export const Inventory: React.FC = () => {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const newProducts: Product[] = results.data.map((row: any, index) => ({
-          id: `csv-${Date.now()}-${index}`,
-          code: row.Code || `CSV-${index}`,
-          barcode: row.Barcode || '',
-          description: row.Description || 'Unknown',
-          descriptionCsd: row.Description_CSD || '',
-          unit: row.Unit || 'Box',
-          cpu: parseFloat(row.CPU) || 0,
-          tpCsd: parseFloat(row.TP_CSD) || 0,
-          tpCaptainsWorld: parseFloat(row.TP_Captains) || 0,
-          tpCoopers: parseFloat(row.TP_Coopers) || 0,
-          tpShumis: parseFloat(row.TP_Shumis) || 0,
-          tpGenius: parseFloat(row.TP_Genius) || 0,
-          tpOverseas: parseFloat(row.TP_Overseas) || 0,
-          tpIferi: parseFloat(row.TP_Iferi) || 0,
-          mrp: parseFloat(row.MRP) || 0,
-          stock: parseInt(row.Stock) || 0,
-        }));
+        let updatedProducts = [...products];
+
+        results.data.forEach((row: any, index: number) => {
+          const rowCode = row.Code || `CSV-${index}`;
+          const existingIndex = updatedProducts.findIndex(p => p.code.toLowerCase() === rowCode.toLowerCase());
+
+          const productData = {
+            code: rowCode,
+            barcode: row.Barcode || '',
+            description: row.Description || 'Unknown',
+            descriptionCsd: row.Description_CSD || '',
+            unit: row.Unit || 'Box',
+            cpu: parseFloat(row.CPU) || 0,
+            tpCsd: parseFloat(row.TP_CSD) || 0,
+            tpCaptainsWorld: parseFloat(row.TP_Captains) || 0,
+            tpCoopers: parseFloat(row.TP_Coopers) || 0,
+            tpShumis: parseFloat(row.TP_Shumis) || 0,
+            tpGenius: parseFloat(row.TP_Genius) || 0,
+            tpOverseas: parseFloat(row.TP_Overseas) || 0,
+            tpIferi: parseFloat(row.TP_Iferi) || 0,
+            mrp: parseFloat(row.MRP) || 0,
+            stock: parseInt(row.Stock) || 0,
+          };
+
+          if (existingIndex >= 0) {
+            updatedProducts[existingIndex] = { ...updatedProducts[existingIndex], ...productData };
+          } else {
+            updatedProducts.push({
+              ...productData,
+              id: `csv-${Date.now()}-${index}`,
+            } as Product);
+          }
+        });
         
-        setProducts([...products, ...newProducts]);
+        setProducts(updatedProducts);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     });
