@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../store';
-import { Package, Receipt, Wallet, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Package, Receipt, Wallet, TrendingUp, AlertTriangle, CheckCircle, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from 'recharts';
+import Papa from 'papaparse';
 
 export const Dashboard: React.FC = () => {
-  const { products, invoices, setInvoices, setProducts, currentUser } = useStore();
+  const { products, invoices, setInvoices, setProducts, currentUser, ledger, shipments, returns } = useStore();
 
   const isAdmin = currentUser?.role === 'Admin';
   const totalProducts = products.length;
@@ -95,11 +96,74 @@ export const Dashboard: React.FC = () => {
   const nameParts = currentUser?.name?.trim().split(/\s+/) || [];
   const greetingName = nameParts.length > 2 ? nameParts[1] : (nameParts.length === 2 ? nameParts[1] : nameParts[0]);
 
+  const exportAllData = () => {
+    const downloadFile = (content: string, filename: string) => {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    // 1. Export Inventory
+    if (products.length > 0) {
+      downloadFile(Papa.unparse(products), 'inventory_export.csv');
+    }
+
+    // 2. Export Ledger
+    if (ledger.length > 0) {
+      downloadFile(Papa.unparse(ledger), 'ledger_export.csv');
+    }
+
+    // 3. Export Shipments
+    if (shipments.length > 0) {
+      const flatShipments = shipments.map(s => ({
+        ...s,
+        items: JSON.stringify(s.items)
+      }));
+      downloadFile(Papa.unparse(flatShipments), 'shipments_export.csv');
+    }
+
+    // 4. Export Invoices
+    if (invoices.length > 0) {
+      const flatInvoices = invoices.map(i => ({
+        ...i,
+        items: JSON.stringify(i.items)
+      }));
+      downloadFile(Papa.unparse(flatInvoices), 'invoices_export.csv');
+    }
+
+    // 5. Export Returns
+    if (returns.length > 0) {
+      const flatReturns = returns.map(r => ({
+        ...r,
+        items: JSON.stringify(r.items)
+      }));
+      downloadFile(Papa.unparse(flatReturns), 'returns_export.csv');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-[#2a4d7d] to-[#4097d0] rounded-xl p-6 sm:p-8 text-white shadow-md">
-        <h1 className="text-3xl font-bold mb-2">Welcome back, {greetingName}!</h1>
-        <p className="text-blue-100">Here's what's happening with your inventory and sales today.</p>
+      <div className="bg-gradient-to-r from-[#2a4d7d] to-[#4097d0] rounded-xl p-6 sm:p-8 text-white shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Welcome back, {greetingName}!</h1>
+          <p className="text-blue-100">Here's what's happening with your inventory and sales today.</p>
+        </div>
+        {isAdmin && (
+          <button 
+            onClick={exportAllData}
+            className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 border border-white/30 text-white rounded-xl transition-all"
+            title="Download multiple CSVs of your data"
+          >
+            <Download size={20} className="mr-2" />
+            Export All Data
+          </button>
+        )}
       </div>
       
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
