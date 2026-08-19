@@ -28,7 +28,8 @@ if (import.meta.env.PROD) {
   }
 }
 
-const db = getFirestore(app, "ai-studio-tzdistributioner-215c7673-7841-4460-be6c-6378252ba9af");
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID;
+const db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
 
 const auth = getAuth(app);
 
