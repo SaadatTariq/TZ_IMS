@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Product, Invoice, PayrollEntry, LedgerEntry, Client, Shipment, ReturnEntry, AuditLog } from './types';
 import { db } from './lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, writeBatch, getDocs } from 'firebase/firestore';
+
+
 
 interface StoreState {
   users: User[];
@@ -73,108 +75,113 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const [isLoaded, setIsLoaded] = useState(false);
   const [dbStatus, setDbStatus] = useState<'Online' | 'Offline' | 'Connecting'>('Connecting');
-  
+
   useEffect(() => {
+    setDbStatus(navigator.onLine ? 'Online' : 'Offline');
     const handleOnline = () => setDbStatus('Online');
     const handleOffline = () => setDbStatus('Offline');
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    setDbStatus(navigator.onLine ? 'Online' : 'Offline');
+
+    const collectionsList = ['users', 'products', 'invoices', 'returns', 'payroll', 'ledger', 'shipments', 'clients', 'auditLogs'];
+    
+    const unsub = onSnapshot(collection(db, 'erp_store'), (snapshot) => {
+      const allDocs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      
+      setState(prev => {
+        const newState = { ...prev };
+        collectionsList.forEach(col => {
+          const colData = allDocs.filter(d => d._collection === col);
+          newState[col as keyof StoreState] = colData.length > 0 ? colData : (initialState as any)[col] || [];
+        });
+        return newState;
+      });
+      setIsLoaded(true);
+    }, (error) => {
+      console.error("Firebase read error:", error);
+      setIsLoaded(true);
+    });
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      unsub();
     };
   }, []);
 
-  useEffect(() => {
-    // Fallback timer: if Firebase takes too long to connect/respond, just use local state
-    const fallbackTimer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 2500);
+    const updateState = async (key: keyof StoreState, value: any) => {
+    if (key === 'currentUser') {
+      setState(prev => ({ ...prev, currentUser: value }));
+      sessionStorage.setItem('erp-currentUser', JSON.stringify(value));
+      return;
+    }
 
-    const unsubscribe = onSnapshot(doc(db, 'erp_store', 'main'), (docSnap) => {
-      clearTimeout(fallbackTimer);
-      if (docSnap.exists()) {
-        const data = docSnap.data() as Partial<StoreState>;
-        let needsUpdate = false;
-        const updatePayload: any = {};
-        
-        // Migrations disabled to prevent overwriting user data
-        if (!data.users) { data.users = []; updatePayload.users = []; needsUpdate = true; }
-        if (!data.clients) { data.clients = []; updatePayload.clients = []; needsUpdate = true; }
-        if (!data.products) { data.products = []; updatePayload.products = []; needsUpdate = true; }
-
-        if (!data.invoices) { data.invoices = []; updatePayload.invoices = []; needsUpdate = true; }
-        if (!data.returns) { data.returns = []; updatePayload.returns = []; needsUpdate = true; }
-        if (!data.payroll) { data.payroll = []; updatePayload.payroll = []; needsUpdate = true; }
-        if (!data.ledger) { data.ledger = []; updatePayload.ledger = []; needsUpdate = true; }
-        if (!data.shipments) { data.shipments = []; updatePayload.shipments = []; needsUpdate = true; }
-        if (!data.auditLogs) { data.auditLogs = []; updatePayload.auditLogs = []; needsUpdate = true; }
-
-        if (needsUpdate) {
-          setDoc(doc(db, 'erp_store', 'main'), updatePayload, { merge: true }).catch(console.error);
-        }
-
-        // Ensure currentUser is never overwritten by remote database
-        delete (data as any).currentUser;
-
-        setState(prev => ({ ...prev, ...data }));
-      } else {
-        const { currentUser, ...stateToSave } = initialState;
-        console.log("Document does not exist. Creating it now...");
-        setDoc(doc(db, 'erp_store', 'main'), stateToSave).then(() => {
-          console.log("Successfully created initial database document!");
-        }).catch(e => {
-          console.error("Failed to create initial database document:", e);
-          alert("Failed to initialize database: " + e.message);
-        });
-      }
-      setIsLoaded(true);
-    }, (error) => {
-      clearTimeout(fallbackTimer);
-      console.error("Firebase read error:", error);
-      alert("Database read failed! You may need to update your Firestore Security Rules in the Firebase Console to allow reads. Using local fallback. Error: " + error.message);
-      setIsLoaded(true);
-    });
-
-    return () => {
-      clearTimeout(fallbackTimer);
-      unsubscribe();
-    };
-  }, []);
-
-  const addAuditLog = (logData: Omit<AuditLog, 'id' | 'timestamp'>) => {
-    const newLog: AuditLog = {
-      ...logData,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      timestamp: new Date().toISOString()
-    };
     setState(prev => {
-      const updatedLogs = [newLog, ...(prev.auditLogs || [])].slice(0, 1000); // Keep last 1000
+      const oldItems = (prev[key] || []) as any[];
+      const newItems = value as any[];
       
-      // Async save to firestore without blocking state
-      const cleanValue = JSON.parse(JSON.stringify(updatedLogs));
-      setDoc(doc(db, 'erp_store', 'main'), { auditLogs: cleanValue }, { merge: true }).catch(console.error);
-      
-      return { ...prev, auditLogs: updatedLogs };
+      const oldIds = new Set(oldItems.map(i => String(i.id)));
+      const newIds = new Set(newItems.map(i => String(i.id)));
+
+      const added = newItems.filter(i => !oldIds.has(String(i.id)));
+      const deleted = oldItems.filter(i => !newIds.has(String(i.id)));
+      const updated = newItems.filter(i => {
+         if (!oldIds.has(String(i.id))) return false;
+         const oldItem = oldItems.find(o => String(o.id) === String(i.id));
+         return JSON.stringify(oldItem) !== JSON.stringify(i);
+      });
+
+      (async () => {
+         try {
+            const b = writeBatch(db);
+            let opsCount = 0;
+
+            deleted.forEach(item => {
+               b.delete(doc(db, 'erp_store', String(item.id)));
+               opsCount++;
+            });
+            
+            [...added, ...updated].forEach(item => {
+               const docId = item.id ? String(item.id) : doc(collection(db, 'erp_store')).id;
+               item.id = docId; // mutates local value but that's fine
+               const dataToSave = JSON.parse(JSON.stringify(item));
+               dataToSave._collection = key;
+               b.set(doc(db, 'erp_store', docId), dataToSave, { merge: true });
+               opsCount++;
+            });
+
+            if (opsCount > 0) {
+               await b.commit();
+            }
+         } catch (error) {
+            console.error("Firestore sync error:", error);
+         }
+      })();
+
+      return { ...prev, [key]: value };
     });
   };
 
-  const updateState = async (key: keyof StoreState, value: any) => {
-    setState(prev => ({ ...prev, [key]: value }));
-    
-    if (key === 'currentUser') {
-      sessionStorage.setItem('erp-currentUser', JSON.stringify(value));
-    } else {
-      try {
-        // Deep clean to remove any undefined values which cause Firestore to crash
-        const cleanValue = JSON.parse(JSON.stringify(value));
-        await setDoc(doc(db, 'erp_store', 'main'), { [key]: cleanValue }, { merge: true });
-      } catch (err: any) {
-        console.error("Firebase sync error:", err);
-        alert("Database save failed! You may need to update your Firestore Security Rules in the Firebase Console to allow writes. Error: " + err.message);
-      }
-    }
+  const addAuditLog = (logData: Omit<AuditLog, 'id' | 'timestamp'>) => {
+    setState(prev => {
+       const newLog: AuditLog = {
+         ...logData,
+         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+         timestamp: new Date().toISOString()
+       };
+       const updatedLogs = [newLog, ...(prev.auditLogs || [])].slice(0, 1000);
+       
+       (async () => {
+         try {
+            const b = writeBatch(db);
+            const dataToSave = JSON.parse(JSON.stringify(newLog));
+            dataToSave._collection = 'auditLogs';
+            b.set(doc(db, 'erp_store', newLog.id), dataToSave, { merge: true });
+            await b.commit();
+         } catch (err) { console.error(err); }
+       })();
+       return { ...prev, auditLogs: updatedLogs };
+    });
   };
 
   if (!isLoaded) {

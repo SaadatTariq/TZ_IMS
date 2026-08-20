@@ -188,7 +188,7 @@ export const Inventory: React.FC<{ type: 'Local' | 'Imported' }> = ({ type }) =>
       setBulkDeleteError("Incorrect password!");
       return;
     }
-    setProducts([]);
+    setProducts(products.filter(p => p.productType !== type));
     setIsBulkDeleting(false);
     setBulkDeletePassword('');
     setBulkDeleteError('');

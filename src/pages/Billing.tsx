@@ -3,22 +3,29 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { Invoice, InvoiceItem, Product, Client } from '../types';
 import { Plus, Trash2, Printer, Save, CheckCircle, Search, Download, Share2 } from 'lucide-react';
-import * as htmlToImage from 'html-to-image';
-import jsPDF from 'jspdf';
 import { useReactToPrint } from 'react-to-print';
 import { numberToWords } from '../utils';
 import { InvoiceTemplate } from '../components/InvoiceTemplate';
 import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 
-// Helper component for Product Search
-const ProductSearch: React.FC<{
+// Global POS Product Search
+const GlobalProductSearch: React.FC<{
   products: Product[];
-  selectedProduct: Product;
   onSelect: (p: Product) => void;
-}> = ({ products, selectedProduct, onSelect }) => {
+}> = ({ products, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Filter by code, barcode, or description
+  const normalize = (str: string) => (str || '').toLowerCase().replace(/[\s\-_]/g, '');
+  const searchNormalized = normalize(searchTerm);
+  
+  const filteredProducts = products.filter(p => 
+     normalize(p.code).includes(searchNormalized) || 
+     normalize(p.barcode || '').includes(searchNormalized) ||
+     normalize(p.description).includes(searchNormalized)
+  ).slice(0, 15);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -30,45 +37,52 @@ const ProductSearch: React.FC<{
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const filteredProducts = products.filter(p => 
-    p.code.toLowerCase().includes(searchTerm.toLowerCase()) || (p.barcode || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && isOpen && filteredProducts.length > 0) {
+      onSelect(filteredProducts[0]);
+      setSearchTerm('');
+      setIsOpen(false);
+    }
+  };
 
   return (
-    <div className="relative" ref={wrapperRef}>
+    <div className="relative mb-6" ref={wrapperRef}>
       <div className="relative">
         <input
           type="text"
-          className="w-full pl-8 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#36609b]"
-          placeholder="Search by Code (e.g. 1235)"
-          value={isOpen ? searchTerm : selectedProduct?.code || ''}
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none"
+          placeholder="Search by Code, Name, or Barcode (Press Enter to add)..."
+          value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
         />
-        <Search className="absolute left-2 top-2.5 text-slate-400" size={16} />
+        <Search className="absolute left-3.5 top-2.5 text-slate-400" size={18} />
       </div>
-      {isOpen && (
-        <ul className="absolute z-10 w-full mt-1 bg-white border rounded-xl shadow-lg max-h-60 overflow-auto">
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map(p => (
-              <li
-                key={p.id}
-                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between"
-                onClick={() => {
-                  onSelect(p);
-                  setSearchTerm('');
-                  setIsOpen(false);
-                }}
-              >
-                <span className="font-medium">{p.code}</span>
-                <span className="text-slate-500 truncate ml-2 text-xs">{p.description} (Stock: {p.stock})</span>
-              </li>
-            ))
-          ) : (
-            <li className="px-3 py-2 text-sm text-slate-500">No products found.</li>
+      {isOpen && searchTerm && (
+        <ul className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-80 overflow-auto">
+          {filteredProducts.map(p => (
+            <li 
+              key={p.id}
+              className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-0 border-slate-100 flex justify-between items-center"
+              onClick={() => {
+                onSelect(p);
+                setSearchTerm('');
+                setIsOpen(false);
+              }}
+            >
+              <div>
+                <span className="font-bold text-slate-800">{p.code}</span>
+                <span className="ml-2 text-sm text-slate-600">{p.description}</span>
+              </div>
+              <div className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Stock: {p.stock}</div>
+            </li>
+          ))}
+          {filteredProducts.length === 0 && (
+            <li className="px-4 py-3 text-slate-500 text-sm">No products found.</li>
           )}
         </ul>
       )}
@@ -109,11 +123,9 @@ export const Billing: React.FC = () => {
     }
   }, [selectedClientId]);
 
-  const addItem = () => {
-    if (products.length > 0) {
-      setItems([...items, { productId: products[0].id, quantity: 1, remark: '', product: products[0] }]);
-      setIsSaved(false);
-    }
+  const handleAddProduct = (p: Product) => {
+    setItems([...items, { productId: p.id, quantity: 0, remark: '', product: p }]);
+    setIsSaved(false);
   };
 
   const updateItem = (index: number, field: string, value: any) => {
@@ -212,63 +224,13 @@ export const Billing: React.FC = () => {
     setIsSaved(true);
   };
 
-  const generatePDF = async () => {
-    setIsGenerating(true);
-
-    try {
-      const element = document.getElementById("invoice-print-area");
-      if (!element) {
-        alert("Print area not found");
-        return null;
-      }
-      const data = await htmlToImage.toPng(element, { pixelRatio: 2 });
-      const pdf = new jsPDF({ orientation: "p", unit: "in", format: [8.4, 11.5] });
-      const pdfWidth = 7.9; // 8.4 minus margins
-      const img = new Image();
-      img.src = data;
-      await new Promise((resolve) => { img.onload = resolve; });
-      const pdfHeight = (img.height * pdfWidth) / img.width;
-      
-      // If height exceeds page minus margins (8.7"), it will overflow, but the pad is 11.5" total.
-      // Top margin: 1.4", Left margin: 0.25"
-      pdf.addImage(data, "PNG", 0.25, 1.4, pdfWidth, pdfHeight);
-      setIsGenerating(false);
-      return pdf;
-    } catch (e: any) {
-      console.error("PDF Generation error:", e);
-      alert("Failed to generate PDF: " + e.message);
-      setIsGenerating(false);
-      return null;
-    }
+  
+  const handleDownload = () => {
+    handlePrint();
   };
 
-  const handleDownload = async () => {
-    const pdf = await generatePDF();
-    if (pdf) {
-      const fileName = selectedClientObj.name === 'CSD' ? `CSD ${csdBranch || '___________________'} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : selectedClientObj.name === 'Shumis' ? `Shumis ${shumisBranch || ''} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${invoiceNo || Date.now().toString()}.pdf`;
-      pdf.save(fileName);
-    }
-  };
-
-  const handleShare = async () => {
-    const pdf = await generatePDF();
-    if (!pdf) return;
-    try {
-      const blob = pdf.output("blob");
-      const fileName = selectedClientObj.name === 'CSD' ? `CSD ${csdBranch || '___________________'} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : selectedClientObj.name === 'Shumis' ? `Shumis ${shumisBranch || ''} invoice dated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${invoiceNo || Date.now().toString()}.pdf`;
-      const file = new File([blob], fileName, { type: "application/pdf" });
-      if (navigator.share) {
-        await navigator.share({ title: "Invoice", files: [file] });
-      } else {
-        alert("Sharing is not supported on this device/browser. Downloading instead.");
-        handleDownload();
-      }
-    } catch (err: any) {
-      console.error("Error sharing:", err);
-      if (err.name !== "AbortError") {
-        alert("Failed to share: " + err.message);
-      }
-    }
+  const handleShare = () => {
+    handlePrint();
   };
 
   const renderCell = (header: string, item: InvoiceItem & { product: Product }, sl: number, arrLength: number, i: number) => {
@@ -391,6 +353,10 @@ export const Billing: React.FC = () => {
           )}
         </div>
 
+        
+        <div className="print:hidden mb-8 max-w-2xl">
+          <GlobalProductSearch products={products} onSelect={handleAddProduct} />
+        </div>
         {/* Invoice Pages */}
         <InvoiceTemplate 
           ref={printRef}
@@ -400,68 +366,12 @@ export const Billing: React.FC = () => {
           date={new Date().toISOString()}
           csdBranch={csdBranch}
           shumisBranch={shumisBranch}
+          updateItem={updateItem}
+          removeItem={removeItem}
         />
-
-        <div className="print:hidden mt-8">
-          <button type="button" onClick={addItem} className="flex items-center text-sm text-[#36609b] hover:text-blue-700 font-medium">
-            <Plus size={16} className="mr-1" /> Add Product Line
-          </button>
-        </div>
       </div>
 
-      {/* Editor Section (Hidden in print) */}
-      <div className="print:hidden bg-white p-6 sm:p-8 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-200/60">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">Edit Line Items</h3>
-        {items.length === 0 ? (
-          <p className="text-slate-500 text-sm">No items added to invoice.</p>
-        ) : (
-          <div className="space-y-4">
-            {items.map((item, index) => (
-              <div key={index} className="flex flex-wrap gap-4 items-start bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div className="flex-1 min-w-[250px]">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Product</label>
-                  <ProductSearch 
-                    products={products} 
-                    selectedProduct={item.product} 
-                    onSelect={(p) => updateItem(index, 'productId', p.id)} 
-                  />
-                </div>
-                <div className="w-24">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Quantity</label>
-                  <input 
-                    type="number" 
-                    min="1"
-                    max={item.product.stock}
-                    value={item.quantity}
-                    onChange={(e) => {
-                      let val = parseInt(e.target.value) || 1;
-                      if (val > item.product.stock) val = item.product.stock;
-                      updateItem(index, 'quantity', val);
-                    }}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none"
-                  />
-                  <div className="text-[10px] text-slate-500 mt-1">Max: {item.product.stock}</div>
-                </div>
-                <div className="flex-1 min-w-[200px]">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Remark</label>
-                  <input 
-                    type="text" 
-                    value={item.remark}
-                    onChange={(e) => updateItem(index, 'remark', e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all focus:border-[#36609b] focus:ring-4 focus:ring-[#36609b]/10 outline-none"
-                    placeholder="Optional remark..."
-                  />
-                </div>
-                <div className="pt-5">
-                  <button type="button" onClick={() => removeItem(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors" title="Remove item">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      
 
     </div>
   );

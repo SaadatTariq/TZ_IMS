@@ -1,0 +1,6 @@
+{
+  "firestore": {
+    "database": "ai-studio-tzdistributioner-215c7673-7841-4460-be6c-6378252ba9af",
+    "rules": "firestore.rules"
+  }
+}

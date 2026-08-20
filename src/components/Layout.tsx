@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
 import { LayoutDashboard, Receipt, Package, Users, Wallet, BookOpen, Truck, Menu, X, LogOut, History, MapPin, RotateCcw, RefreshCw, Activity } from 'lucide-react';
+import { DriveBackup } from './DriveBackup';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -74,7 +75,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
               </button>
             );
           })}
-        </nav>
+            </nav>
+        <div className="px-3 shrink-0">
+          <DriveBackup />
+        </div>
 
         <div className="p-4 shrink-0 border-t border-white/5 bg-[#172133]/50">
           <div className="flex items-center gap-3">

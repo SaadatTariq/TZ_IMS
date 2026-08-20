@@ -13,6 +13,7 @@ export const Login: React.FC = () => {
       (u.username?.toLowerCase() === username.trim().toLowerCase() || u.name.trim().toLowerCase() === username.trim().toLowerCase()) && 
       u.password === password
     );
+
     if (user) {
       setCurrentUser(user);
       addAuditLog({
@@ -101,7 +102,6 @@ export const Login: React.FC = () => {
                   />
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Password
@@ -120,7 +120,6 @@ export const Login: React.FC = () => {
                   />
                 </div>
               </div>
-
               <div>
                 <button
                   type="submit"

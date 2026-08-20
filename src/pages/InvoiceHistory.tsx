@@ -4,8 +4,6 @@ import { FileText, XCircle, Search, Eye, Printer, Download, Share2 } from 'lucid
 import { InvoiceTemplate } from '../components/InvoiceTemplate';
 import { PasswordConfirmModal } from '../components/PasswordConfirmModal';
 import { useReactToPrint } from 'react-to-print';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { Invoice } from '../types';
 
 export const InvoiceHistory: React.FC = () => {
@@ -20,56 +18,13 @@ export const InvoiceHistory: React.FC = () => {
     documentTitle: `Invoice_${selectedInvoice?.id || "Draft"}`, 
   });
 
-  const generatePDF = async () => {
-    setIsGenerating(true);
-    try {
-      const element = printRef.current;
-      if (!element) return null;
-      // Temporarily make it visible for html2canvas
-      
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      
-      
-      const data = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "p", unit: "in", format: [8.4, 11.5] });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(data, "PNG", 0, 0, pdfWidth, pdfHeight);
-      setIsGenerating(false);
-      return pdf;
-    } catch (e: any) {
-      console.error("PDF Generation error:", e);
-      setIsGenerating(false);
-      return null;
-    }
+  
+  const handleDownload = () => {
+    handlePrint();
   };
 
-  const handleDownload = async () => {
-    if (!selectedInvoice) return;
-    const pdf = await generatePDF();
-    if (pdf) {
-      const fileName = selectedInvoice.clientId === 'CSD' ? `CSD ${selectedInvoice.csdBranch || '___________________'} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : selectedInvoice.clientId === 'Shumis' ? `Shumis ${selectedInvoice.shumisBranch || ''} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${selectedInvoice.id}.pdf`;
-      pdf.save(fileName);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!selectedInvoice) return;
-    const pdf = await generatePDF();
-    if (!pdf) return;
-    try {
-      const blob = pdf.output("blob");
-      const fileName = selectedInvoice.clientId === 'CSD' ? `CSD ${selectedInvoice.csdBranch || '___________________'} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : selectedInvoice.clientId === 'Shumis' ? `Shumis ${selectedInvoice.shumisBranch || ''} invoice dated ${new Date(selectedInvoice.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.pdf` : `Invoice_${selectedInvoice.id}.pdf`;
-      const file = new File([blob], fileName, { type: "application/pdf" });
-      if (navigator.share) {
-        await navigator.share({ title: "Invoice", files: [file] });
-      } else {
-        alert("Sharing is not supported on this device/browser. Downloading instead.");
-        handleDownload();
-      }
-    } catch (err: any) {
-      console.error("Error sharing:", err);
-    }
+  const handleShare = () => {
+    handlePrint();
   };
 
 

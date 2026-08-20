@@ -1,8 +1,12 @@
 import React, { forwardRef } from 'react';
 import { Client, InvoiceItem, Product } from '../types';
+import { Trash2 } from 'lucide-react';
 import { numberToWords } from '../utils';
 
 interface InvoiceTemplateProps {
+  updateItem?: (index: number, field: string, value: any) => void;
+  removeItem?: (index: number) => void;
+
   invoiceNo: string;
   selectedClientObj: Client;
   items: (InvoiceItem & { product: Product })[];
@@ -12,7 +16,7 @@ interface InvoiceTemplateProps {
 }
 
 export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({
-  invoiceNo, selectedClientObj, items, date, csdBranch, shumisBranch
+  invoiceNo, selectedClientObj, items, date, csdBranch, shumisBranch, updateItem, removeItem
 }, ref) => {
   const getUnitPrice = (p: Product) => {
     if (!selectedClientObj) return p.cpu;
@@ -44,8 +48,43 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
     else if (h.includes('code')) content = selectedClientObj?.name === 'CSD' ? (p.barcode || p.code) : p.code;
     else if (h.includes('desc')) content = selectedClientObj?.name === 'CSD' ? (p.descriptionCsd || p.description) : p.description;
     else if (h.includes('unit')) content = p.unit;
-    else if (h.includes('quant') || h === 'qty') content = item.quantity;
-    else if (h.includes('remark') || h.includes('remarks')) content = item.remark;
+    else if (h.includes('quant') || h === 'qty') {
+      if (updateItem) {
+        content = (
+          <input
+            type="number"
+            min="0"
+            max={p.stock}
+            value={item.quantity === 0 ? '' : item.quantity}
+            onChange={(e) => {
+              let val = parseInt(e.target.value);
+              if (Number.isNaN(val)) val = 0;
+              if (val > p.stock) val = p.stock;
+              updateItem(sl - 1, 'quantity', val);
+            }}
+            className="w-16 text-center border-b border-gray-300 focus:border-blue-500 outline-none print:border-none print:appearance-none bg-transparent"
+            placeholder="Qty"
+          />
+        );
+      } else {
+        content = item.quantity;
+      }
+    }
+    else if (h.includes('remark') || h.includes('remarks')) {
+      if (updateItem) {
+        content = (
+          <input
+            type="text"
+            value={item.remark}
+            onChange={(e) => updateItem(sl - 1, 'remark', e.target.value)}
+            className="w-full min-w-[60px] border-b border-gray-300 focus:border-blue-500 outline-none print:border-none bg-transparent text-center"
+            placeholder="Remark"
+          />
+        );
+      } else {
+        content = item.remark;
+      }
+    }
     else if (h === 'cpu') content = p.cpu;
     else if (h === 'mrp') content = p.mrp;
     else if (h.includes('total')) content = (getUnitPrice(p) * item.quantity).toFixed(2);
@@ -118,20 +157,31 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             <div className="overflow-x-auto mb-4">
               <table className="w-full text-left border-collapse border border-gray-400">
                 <thead>
+                  
                   <tr className="border-b border-gray-400 text-sm">
                     {selectedClientObj?.headers.map((h, i, arr) => (
                       <th key={h} className={`p-2 text-center ${i < arr.length - 1 ? 'border-r border-gray-400' : ''}`}>{h}</th>
                     ))}
+                    {removeItem && <th className="print:hidden w-8 border-none"></th>}
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {pageItems.map((item, localIndex) => (
-                    <tr key={localIndex} className="border-b border-gray-400">
+                  {pageItems.map((item, localIndex) => {
+                    const globalIdx = globalStartIndex + localIndex;
+                    return (
+                    <tr key={localIndex} className="border-b border-gray-400 relative group">
                       {selectedClientObj?.headers.map((h, i, arr) => 
-                        renderCell(h, item, globalStartIndex + localIndex + 1, arr.length, i)
+                         renderCell(h, item, globalIdx + 1, arr.length, i)
+                      )}
+                      {removeItem && (
+                        <td className="print:hidden text-center align-middle border-none">
+                          <button onClick={() => removeItem(globalIdx)} className="text-red-500 hover:text-red-700 p-1 opacity-50 hover:opacity-100 transition-opacity">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
                       )}
                     </tr>
-                  ))}
+                  )})}
                   
                   {isLastPage && (
                     <>

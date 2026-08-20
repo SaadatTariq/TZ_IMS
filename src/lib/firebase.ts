@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 // Vite handles import with fallback.
 // In Vercel, this file might exist because it's committed to Git.
@@ -37,4 +37,5 @@ const dbId = import.meta.env.VITE_FIREBASE_DATABASE_ID || config?.firestoreDatab
 const db = getFirestore(app, dbId);
 
 const auth = getAuth(app);
-export { app, analytics, db, auth };
+const googleAuthProvider = new GoogleAuthProvider();
+export { app, analytics, db, auth, googleAuthProvider };
