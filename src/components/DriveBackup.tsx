@@ -23,6 +23,9 @@ export const DriveBackup: React.FC = () => {
             setStatus('error');
             return;
           }
+          // Cache token for 55 minutes (Google tokens expire in 60m)
+          sessionStorage.setItem('erp_drive_token', response.access_token);
+          sessionStorage.setItem('erp_drive_token_expiry', (Date.now() + 55 * 60 * 1000).toString());
           performBackup(response.access_token);
         },
       });
@@ -63,6 +66,7 @@ export const DriveBackup: React.FC = () => {
       const metadata = {
         name: `IMS_Backup_${new Date().toISOString().replace(/:/g, '-')}.json`,
         mimeType: 'application/json',
+        parents: ['19L_NGDUUsw4jBnqXP0vlYiA623CHPkX-']
       };
 
       // 1. Create file metadata
@@ -121,8 +125,15 @@ export const DriveBackup: React.FC = () => {
   };
 
   const requestBackup = () => {
-    if (tokenClient) {
-      tokenClient.requestAccessToken();
+    const cachedToken = sessionStorage.getItem('erp_drive_token');
+    const expiry = parseInt(sessionStorage.getItem('erp_drive_token_expiry') || '0', 10);
+    
+    if (cachedToken && Date.now() < expiry) {
+      // Use valid cached token directly without any popup
+      performBackup(cachedToken);
+    } else if (tokenClient) {
+      // Token expired (or 1st time). Use prompt: '' so it flashes and auto-closes if already authorized.
+      tokenClient.requestAccessToken({ prompt: '' });
     }
   };
 
